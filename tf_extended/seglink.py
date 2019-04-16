@@ -4,6 +4,7 @@ import tensorflow as tf
 
 import config
 import util
+from preprocessing.ssd_vgg_preprocessing import tf_summary_image
 
 ############################################################################################################
 #                       seg_gt calculation                                                                 #
@@ -39,13 +40,18 @@ def min_area_rect(xs, ys):
         
     num_rects = xs.shape[0]
     box = np.empty((num_rects, 5))#cx, cy, w, h, theta
-    for idx in xrange(num_rects):
+    for idx in range(num_rects):
         points = zip(xs[idx, :], ys[idx, :])
+        tmp = zip(xs[idx, :], ys[idx, :])
         cnt = util.img.points_to_contour(points)
         rect = cv2.minAreaRect(cnt)
         cx, cy = rect[0]
         w, h = rect[1]
         theta = rect[2]
+        tf.summary.scalar("theta", theta)
+        #print("xk: points is {}".format([i for i in tmp]))
+        #print("xk: minAreaRect is {}".format(rect))
+        #print("xk: theta is {}".format(theta))
         box[idx, :] = [cx, cy, w, h, theta]
     
     box = np.asarray(box, dtype = xs.dtype)
@@ -87,7 +93,7 @@ def transform_cv_rect(rects):
     
     rects = np.asarray(rects, dtype = np.float32).copy()
     num_rects = np.shape(rects)[0]
-    for idx in xrange(num_rects):
+    for idx in range(num_rects):
         cx, cy, w, h, theta = rects[idx, ...];
         #assert theta < 0 and theta >= -90, "invalid theta: %f"%(theta) 
         if abs(theta) > 45 or (abs(theta) == 45 and w < h):
@@ -183,7 +189,7 @@ def cal_seg_loc_for_single_anchor(anchor, rect):
     
     # rotate the box to original direction
     rect = rotate_horizontal_bbox_to_oriented(center, rect)
-    
+
     return rect    
     
 
@@ -221,7 +227,7 @@ def match_anchor_to_text_boxes(anchors, xs, ys):
     
     #represent bboxes using contours
     cnts = []
-    for bbox_idx in xrange(num_bboxes):
+    for bbox_idx in range(num_bboxes):
         bbox_points = zip(xs[bbox_idx, :], ys[bbox_idx, :])
         cnt = util.img.points_to_contour(bbox_points);
         cnts.append(cnt)
@@ -229,12 +235,12 @@ def match_anchor_to_text_boxes(anchors, xs, ys):
     import time
     start_time = time.time()
     # match anchor to bbox
-    for anchor_idx in xrange(num_anchors):
+    for anchor_idx in range(num_anchors):
         anchor = anchors[anchor_idx, :]
         acx, acy, aw, ah = anchor
         center_point_matched = False
         height_matched = False
-        for bbox_idx in xrange(num_bboxes):
+        for bbox_idx in range(num_bboxes):
             # center point check
             center_point_matched = util.img.is_in_contour((acx, acy), cnts[bbox_idx])
             if not center_point_matched:
@@ -248,10 +254,12 @@ def match_anchor_to_text_boxes(anchors, xs, ys):
                 # an anchor can only be matched to at most one bbox
                 seg_labels[anchor_idx] = bbox_idx
                 seg_locations[anchor_idx, :] = cal_seg_loc_for_single_anchor(anchor, rect)
+
+    #print("xk: seg_locations is {}".format(seg_locations))            
         
     end_time = time.time()
     tf.logging.info('Time in For Loop: %f'%(end_time - start_time))
-    return seg_labels, seg_locations
+    return seg_labels, seg_locations, rects
 
 # @util.dec.print_calling_in_short_for_tf
 def match_anchor_to_text_boxes_fast(anchors, xs, ys):
@@ -288,10 +296,12 @@ def match_anchor_to_text_boxes_fast(anchors, xs, ys):
     # construct a bbox point map: keys are the poistion of all points in bbox contours, and 
     #    value being the bbox index
     bbox_mask = np.ones(config.image_shape, dtype = np.int32) * (-1)
-    for bbox_idx in xrange(num_bboxes):
+    bbox_mask_2 = np.ones(config.image_shape, dtype = np.int32)
+    for bbox_idx in range(num_bboxes):
         bbox_points = zip(xs[bbox_idx, :], ys[bbox_idx, :])
         bbox_cnts = util.img.points_to_contours(bbox_points)
         util.img.draw_contours(bbox_mask, bbox_cnts, -1, color = bbox_idx, border_width = - 1)
+        util.img.draw_contours(bbox_mask_2, bbox_cnts, -1, color = bbox_idx, border_width = - 1)
     
     points_in_bbox_mask = np.where(bbox_mask >= 0)
     points_in_bbox_mask = set(zip(*points_in_bbox_mask))
@@ -313,7 +323,10 @@ def match_anchor_to_text_boxes_fast(anchors, xs, ys):
                 # an anchor can only be matched to at most one bbox
                 seg_labels[anchor_idx] = bbox_idx
                 seg_locations[anchor_idx, :] = cal_seg_loc_for_single_anchor(anchor, rect)
-    return seg_labels, seg_locations
+
+
+    #print("xk: seg_locations are {}".format(seg_locations))
+    return seg_labels, seg_locations, bbox_mask_2, rects
 
 
 ############################################################################################################
@@ -334,7 +347,7 @@ def reshape_link_gt_by_layer(link_gt):
         layer_link_gt = np.reshape(layer_link_gt, (lh, lw, 8))
         inter_layer_link_gts[layer_name] = layer_link_gt
         
-    for layer_idx in xrange(1, len(config.feat_layers)):
+    for layer_idx in range(1, len(config.feat_layers)):
         layer_name = config.feat_layers[layer_idx]
         layer_shape = config.feat_shapes[layer_name]
         lh, lw = layer_shape
@@ -392,8 +405,8 @@ def cal_link_labels(labels):
         if layer_idx > 0: # no cross-layer link for the first layer. 
             cross_layer_link_gt = np.ones((h, w, 4), dtype = np.int32) * (-1)
             
-        for x in xrange(w):
-            for y in xrange(h):
+        for x in range(w):
+            for y in range(h):
                 # the value in layer_match_result stands for the bbox idx a segments matches 
                 # if less than 0, not matched.
                 # only matched segments are considered in link_gt calculation
@@ -492,7 +505,7 @@ def decode_seg_offsets_pred(seg_offsets_pred):
     return seg_loc
 
 # @util.dec.print_calling_in_short_for_tf
-def get_all_seglink_gt(xs, ys, ignored):
+def get_all_seglink_gt(xs, ys, ignored, image):
     
     # calculate ground truths. 
     # for matching results, i.e., seg_labels and link_labels, the values stands for the 
@@ -506,7 +519,8 @@ def get_all_seglink_gt(xs, ys, ignored):
             but got %s and %s'%(len(xs), len(ignored))
             
     anchors = config.default_anchors
-    seg_labels, seg_locations = match_anchor_to_text_boxes_fast(anchors, xs, ys);
+    seg_labels, seg_locations, bbox_mask, rects = match_anchor_to_text_boxes_fast(anchors, xs, ys);
+
     link_labels = cal_link_labels(seg_labels)
     seg_offsets = encode_seg_offsets(seg_locations)
     
@@ -543,10 +557,10 @@ def get_all_seglink_gt(xs, ys, ignored):
     seg_offsets = np.asarray(seg_offsets, dtype = np.float32)
     link_labels = np.asarray(link_labels, dtype = np.int32)
     
-    return seg_labels, seg_offsets, link_labels
+    return seg_labels, seg_offsets, link_labels, seg_locations, bbox_mask, rects
     
 
-def tf_get_all_seglink_gt(xs, ys, ignored):
+def tf_get_all_seglink_gt(xs, ys, ignored, image):
     """
     xs, ys: tensors reprensenting ground truth bbox, both with shape=(N, 4), values in 0~1
     """
@@ -554,11 +568,11 @@ def tf_get_all_seglink_gt(xs, ys, ignored):
     
     xs = xs * w_I
     ys = ys * h_I    
-    seg_labels, seg_offsets, link_labels = tf.py_func(get_all_seglink_gt, [xs, ys, ignored], [tf.int32, tf.float32, tf.int32]);
+    seg_labels, seg_offsets, link_labels, seg_locations, bbox_mask, rects  = tf.py_func(get_all_seglink_gt, [xs, ys, ignored, image], [tf.int32, tf.float32, tf.int32, tf.float32, tf.int32, tf.float32]);
     seg_labels.set_shape([config.num_anchors])
     seg_offsets.set_shape([config.num_anchors, 5])
     link_labels.set_shape([config.num_links])
-    return seg_labels, seg_offsets, link_labels;
+    return seg_labels, seg_offsets, link_labels, seg_locations, bbox_mask, rects
 
 ############################################################################################################
 #                       linking segments together                                                          #
@@ -605,7 +619,10 @@ def group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold)
 
         
     seg_indexes = np.arange(len(seg_scores))
+    print(">>>>> seg_scores is {} {}".format(seg_scores.shape, seg_scores))
+    print(">>>>> seg_indexes is {} {}".format(seg_indexes.shape, seg_indexes))
     layer_seg_indexes = reshape_labels_by_layer(seg_indexes)
+    print(">>>>> layer_seg_indexes is {} {}".format(len(layer_seg_indexes), layer_seg_indexes))
 
     layer_inter_link_scores, layer_cross_link_scores = reshape_link_gt_by_layer(link_scores)
     
@@ -622,8 +639,8 @@ def group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold)
             layer_cross_link_score = layer_cross_link_scores[layer_name]
             
             
-        for y in xrange(lh):
-            for x in xrange(lw):
+        for y in range(lh):
+            for x in range(lw):
                 seg_index = layer_seg_index[y, x]
                 _seg_score = seg_scores[seg_index]
                 if _seg_score >= seg_conf_threshold:
@@ -697,6 +714,7 @@ def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred,
         image_shape = config.image_shape
 
     seg_groups = group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold);
+    print("seg_groups is {}".format(seg_groups))
     seg_locs = decode_seg_offsets_pred(seg_offsets_pred)
     
     bboxes = []
@@ -756,9 +774,9 @@ def combine_segs(segs, return_bias = False):
     idx1 = -1;
     idx2 = -1;
 
-    for i in xrange(len(proj_points)):
+    for i in range(len(proj_points)):
         point1 = proj_points[i, :]
-        for j in xrange(i + 1, len(proj_points)):
+        for j in range(i + 1, len(proj_points)):
             point2 = proj_points[j, :]
             dist = np.sqrt(np.sum((point1 - point2) ** 2))
             if dist > max_dist:
@@ -805,7 +823,7 @@ def bboxes_to_xys(bboxes, image_shape):
     xys = np.zeros((len(bboxes), 8))
     for bbox_idx, bbox in enumerate(bboxes):
         bbox = ((bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox[4])
-        points = cv2.cv.BoxPoints(bbox)
+        points = cv2.boxPoints(bbox)
         points = np.int0(points)
         for i_xy, (x, y) in enumerate(points):
             x = get_valid_x(x)

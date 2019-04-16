@@ -35,11 +35,20 @@ synthtext = DatasetConfig(
     }
 )
 
+kuaidi_cut = DatasetConfig(
+    file_pattern = 'kuaidi_cut_*.tfrecord',
+    split_sizes = {
+        'train': 88,
+        'test': 10
+    }
+)
+
 datasets_map = {
     'icdar2013':icdar2013,
     'icdar2015':icdar2015,
     'scut':scut,
-    'synthtext':synthtext
+    'synthtext':synthtext,
+    'kuaidi_cut':kuaidi_cut
 }
 
 

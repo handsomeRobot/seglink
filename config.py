@@ -6,7 +6,6 @@ import tensorflow as tf
 slim = tf.contrib.slim
 import util
 
-
 global feat_shapes
 global image_shape
 
@@ -38,12 +37,13 @@ feat_layers = ['conv4_3','fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
 # feat_norms = [20] + [-1] * len(feat_layers)
 max_height_ratio = 1.5
 # prior_scaling = [0.1, 0.2, 0.1, 0.2, 20.0]
-prior_scaling = [0.2, 0.5, 0.2, 0.5, 20.0]
-# prior_scaling = [1.0] * 5
+#prior_scaling = [0.2, 0.5, 0.2, 0.5, 20.0]
+prior_scaling = [1.0] * 5
 
 max_neg_pos_ratio = 3
 
 data_format = 'NHWC'
+
 def _set_image_shape(shape):
     global image_shape
     image_shape = shape
@@ -109,7 +109,7 @@ def init_config(image_shape, batch_size = 1,
     anchors, _ = anchor_layer.generate_anchors()
     global default_anchors
     default_anchors = anchors
-    
+   
     global num_anchors
     num_anchors = len(anchors)
     
@@ -126,7 +126,7 @@ def init_config(image_shape, batch_size = 1,
     num_clones = len(gpus)
     
     global clone_scopes
-    clone_scopes = ['clone_%d'%(idx) for idx in xrange(num_clones)]
+    clone_scopes = ['clone_%d'%(idx) for idx in range(num_clones)]
     
     _set_batch_size(batch_size)
     
@@ -135,6 +135,7 @@ def init_config(image_shape, batch_size = 1,
     if batch_size_per_gpu < 1:
         raise ValueError('Invalid batch_size [=%d], resulting in 0 images per gpu.'%(batch_size))
     
+    return default_anchors
     
 def print_config(flags, dataset, save_dir = None, print_to_file = True):
     def do_print(stream=None):
@@ -164,9 +165,11 @@ def print_config(flags, dataset, save_dir = None, print_to_file = True):
         # Save to a text file as well.
         if save_dir is None:
             save_dir = flags.train_dir
+            print("save_dir is {}".format(save_dir))
             
         util.io.mkdir(save_dir)
         path = util.io.join_path(save_dir, 'training_config.txt')
         with open(path, "a") as out:
             do_print(out)
-    
+
+    return default_anchors 

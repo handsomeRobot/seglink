@@ -13,8 +13,8 @@ DATASET_DIR=$3
 python test_seglink.py \
 			--checkpoint_path=${CHECKPOINT_PATH} \
 			--gpu_memory_fraction=-1 \
-			--seg_conf_threshold=0.8 \
-			--link_conf_threshold=0.5 \
+			--seg_conf_threshold=0.6 \
+			--link_conf_threshold=1.5 \
             --dataset_dir=${DATASET_DIR}
 			
 			

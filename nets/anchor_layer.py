@@ -32,7 +32,7 @@ def _generate_anchors_one_layer(h_I, w_I, h_l, w_l):
     
     anchor_scale = _get_scale(w_I, w_l)
     anchor_w = np.ones_like(cx) * anchor_scale
-    anchor_h = np.ones_like(cx) * anchor_scale # cx.shape == cy.shape
+    anchor_h = np.ones_like(cy) * anchor_scale # cx.shape == cy.shape
     
     anchors = np.asarray([cx, cy, anchor_w, anchor_h])
     anchors = np.transpose(anchors, (1, 2, 0))
@@ -58,8 +58,8 @@ def _test_generate_anchors_one_layer():
     anchors = _generate_anchors_one_layer(h_I, w_I, h_l, w_l, gamma = 1.5)
     assert(anchors.shape == (h_l, w_l, 4))
     mask = util.img.black(image_shape)
-    for x in xrange(w_l):
-        for y in xrange(h_l):
+    for x in range(w_l):
+        for y in range(h_l):
             cx, cy, w, h = anchors[y, x, :]
             xmin = (cx - w / 2)
             ymin = (cy - h / 2)

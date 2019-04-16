@@ -21,6 +21,7 @@ class SegLinkNet(object):
         
         self._build_network();
         self.shapes = self.get_shapes();
+
     def get_shapes(self):
         shapes = {}
             
@@ -183,7 +184,7 @@ class SegLinkNet(object):
         
         def OHNM_batch(neg_conf, pos_mask, neg_mask):
             selected_neg_mask = []
-            for image_idx in xrange(batch_size):
+            for image_idx in range(int(batch_size)):
                 image_neg_conf = neg_conf[image_idx, :]
                 image_neg_mask = neg_mask[image_idx, :]
                 image_pos_mask = pos_mask[image_idx, :]
@@ -200,7 +201,7 @@ class SegLinkNet(object):
         seg_pos_mask, seg_neg_mask = get_pos_and_neg_masks(seg_labels)
         seg_selected_mask = OHNM_batch(seg_neg_scores, seg_pos_mask, seg_neg_mask)
         n_seg_pos = tf.reduce_sum(tf.cast(seg_pos_mask, tf.float32))
-        
+
         with tf.name_scope('seg_cls_loss'):            
             def has_pos():
                 seg_cls_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -209,6 +210,7 @@ class SegLinkNet(object):
                 return tf.reduce_sum(seg_cls_loss * seg_selected_mask) / n_seg_pos
             def no_pos():
                 return tf.constant(.0);
+
             seg_cls_loss = tf.cond(n_seg_pos > 0, has_pos, no_pos)
             tf.add_to_collection(tf.GraphKeys.LOSSES, seg_cls_loss)
         

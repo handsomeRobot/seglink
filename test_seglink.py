@@ -19,9 +19,9 @@ import config
 # =========================================================================== #
 # model threshold parameters
 # =========================================================================== #
-tf.app.flags.DEFINE_float('seg_conf_threshold', 0.9, 
+tf.app.flags.DEFINE_float('seg_conf_threshold', 0.0, 
                           'the threshold on the confidence of segment')
-tf.app.flags.DEFINE_float('link_conf_threshold', 0.7, 
+tf.app.flags.DEFINE_float('link_conf_threshold', 0.0, 
                           'the threshold on the confidence of linkage')
 
 # =========================================================================== #
@@ -44,8 +44,8 @@ tf.app.flags.DEFINE_string('dataset_dir',
            'The directory where the dataset files are stored.')
 tf.app.flags.DEFINE_string(
     'model_name', 'seglink_vgg', 'The name of the architecture to train.')
-tf.app.flags.DEFINE_integer('eval_image_width', 1280, 'Train image size')
-tf.app.flags.DEFINE_integer('eval_image_height', 768, 'Train image size')
+tf.app.flags.DEFINE_integer('eval_image_width', 512, 'Train image size')
+tf.app.flags.DEFINE_integer('eval_image_height', 512, 'Train image size')
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -66,7 +66,7 @@ def config_initialization():
     
 def write_result(image_name, image_data, bboxes, path):
   filename = util.io.join_path(path, 'res_%s.txt'%(image_name))
-  print filename
+  print(filename)
   lines = []
   for bbox in bboxes:
         line = "%d, %d, %d, %d, %d, %d, %d, %d\r\n"%(int(v) for v in bbox)
@@ -130,20 +130,20 @@ def eval():
                 line = "%d, %d, %d, %d, %d, %d, %d, %d\n"%tuple(values)
                 lines.append(line)
           util.io.write_lines(filename, lines)
-          print 'result has been written to:', filename
+          print('result has been written to:', filename)
           
         for iter, image_name in enumerate(image_names):
             image_data = util.img.imread(util.io.join_path(FLAGS.dataset_dir, image_name), rgb = True)
             image_name = image_name.split('.')[0]
             image_bboxes = sess.run([bboxes_pred], feed_dict = {image:image_data, image_shape:image_data.shape})
-            print '%d/%d: %s'%(iter + 1, len(image_names), image_name)
+            print('%d/%d: %s'%(iter + 1, len(image_names), image_name))
             write_result_as_txt(image_name, image_bboxes[0], txt_path)
                 
         # create zip file for icdar2015
         cmd = 'cd %s;zip -j %s %s/*'%(dump_path, zip_path, txt_path);
-        print cmd
-        print util.cmd.cmd(cmd);
-        print "zip file created: ", util.io.join_path(dump_path, zip_path)
+        print(cmd)
+        print(util.cmd.cmd(cmd))
+        print("zip file created: ", util.io.join_path(dump_path, zip_path))
 
 
 def main(_):

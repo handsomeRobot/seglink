@@ -27,6 +27,8 @@ def bboxes_resize(bbox_ref, bboxes, xs, ys, name=None):
     with tf.name_scope(name, 'bboxes_resize'):
         h_ref = bbox_ref[2] - bbox_ref[0]
         w_ref = bbox_ref[3] - bbox_ref[1]
+        print("h_ref is {}".format(h_ref))
+        print("w_ref is {}".format(w_ref))
         
         # Translate.
         v = tf.stack([bbox_ref[0], bbox_ref[1], bbox_ref[0], bbox_ref[1]])
@@ -39,6 +41,11 @@ def bboxes_resize(bbox_ref, bboxes, xs, ys, name=None):
         bboxes = bboxes / s
         xs = xs / w_ref;
         ys = ys / h_ref;
+
+        # must be within 0-1
+        #bboxes = tf.minimum(tf.maximum(bboxes, 0), 1)
+        #xs = tf.minimum(tf.maximum(xs, 0), 1)
+        #ys = tf.minimum(tf.maximum(ys, 0), 1)
         
         return bboxes, xs, ys
 

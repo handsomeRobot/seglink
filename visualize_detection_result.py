@@ -6,7 +6,7 @@ import util
 
 def draw_bbox(image_data, line, color):
     line = util.str.remove_all(line, '\xef\xbb\xbf')
-    data = line.split(',');
+    data = line.strip().split(',');
 
     def draw_rectangle():
         x1, y1, x2, y2 = [int(v) for v in data[0 : 4]]    
@@ -26,12 +26,16 @@ def draw_bbox(image_data, line, color):
             pos = pos, 
             scale = 1, 
             color = color)
+
     def draw_oriented_bbox():
+        print("data is {}".format(data))
+        if data == ['']: 
+            return
         points = [int(v) for v in data[0:8]]
         points = np.reshape(points, (4, 2))
         cnts = util.img.points_to_contours(points)
         util.img.draw_contours(image_data, cnts, -1, color = color, border_width = 1)
-    
+
     draw_oriented_bbox()
 #     if len(data) == 5: # ic13 gt
 #         draw_rectangle()
@@ -62,7 +66,7 @@ def visualize(image_root, det_root, output_root, gt_root = None):
     image_names = util.io.ls(image_root, '.jpg')
     for image_idx, image_name in enumerate(image_names):
         
-        print '%d / %d: %s'%(image_idx + 1, len(image_names), image_name)
+        print('%d / %d: %s'%(image_idx + 1, len(image_names), image_name))
         image_data = read_image_file(image_name) # in BGR
         image_name = image_name.split('.')[0]
         

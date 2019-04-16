@@ -18,7 +18,7 @@ import config
 # =========================================================================== #
 # model threshold parameters
 # =========================================================================== #
-tf.app.flags.DEFINE_string('train_with_ignored', False, 
+tf.app.flags.DEFINE_boolean('train_with_ignored', False, 
        'whether to use ignored bbox (in ic15) in training.')
 tf.app.flags.DEFINE_boolean('do_grid_search', False, 
        'whether to do grid search to find a best combinations of \
@@ -70,8 +70,8 @@ tf.app.flags.DEFINE_string(
     'dataset_dir', None, 'The directory where the dataset files are stored.')
 tf.app.flags.DEFINE_string(
     'model_name', 'seglink_vgg', 'The name of the architecture to train.')
-tf.app.flags.DEFINE_integer('eval_image_width', 1280, 'Train image size')
-tf.app.flags.DEFINE_integer('eval_image_height', 768, 'Train image size')
+tf.app.flags.DEFINE_integer('eval_image_width', 512, 'Train image size')
+tf.app.flags.DEFINE_integer('eval_image_height', 512, 'Train image size')
 
 
 FLAGS = tf.app.flags.FLAGS

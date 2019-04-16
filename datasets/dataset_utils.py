@@ -43,6 +43,7 @@ def bytes_feature(value):
     """
     if not isinstance(value, list):
         value = [value]
+    value = [v.encode() if not isinstance(v, bytes) else v for v in value]
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 
@@ -80,12 +81,16 @@ def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxe
             'image/object/bbox/ymax': float_feature(list(bboxes[:, 3])),
             'image/object/bbox/x1': float_feature(list(oriented_bboxes[:, 0])),
             'image/object/bbox/y1': float_feature(list(oriented_bboxes[:, 1])),
+            'image/object/bbox/z1': float_feature([1] * len(oriented_bboxes)),
             'image/object/bbox/x2': float_feature(list(oriented_bboxes[:, 2])),
             'image/object/bbox/y2': float_feature(list(oriented_bboxes[:, 3])),
+            'image/object/bbox/z2': float_feature([1] * len(oriented_bboxes)),
             'image/object/bbox/x3': float_feature(list(oriented_bboxes[:, 4])),
             'image/object/bbox/y3': float_feature(list(oriented_bboxes[:, 5])),
+            'image/object/bbox/z3': float_feature([1] * len(oriented_bboxes)),
             'image/object/bbox/x4': float_feature(list(oriented_bboxes[:, 6])),
             'image/object/bbox/y4': float_feature(list(oriented_bboxes[:, 7])),
+            'image/object/bbox/z4': float_feature([1] * len(oriented_bboxes)),
             'image/object/bbox/label': int64_feature(labels),
             'image/object/bbox/label_text': bytes_feature(labels_text),
             'image/object/bbox/ignored': int64_feature(ignored),
@@ -123,6 +128,10 @@ def get_split(split_name, dataset_dir, file_pattern, num_samples, reader=None):
         'image/object/bbox/y2': tf.VarLenFeature(dtype=tf.float32),
         'image/object/bbox/y3': tf.VarLenFeature(dtype=tf.float32),
         'image/object/bbox/y4': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/z1': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/z2': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/z3': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/z4': tf.VarLenFeature(dtype=tf.float32),
         'image/object/bbox/ignored': tf.VarLenFeature(dtype=tf.int64),
         'image/object/bbox/label': tf.VarLenFeature(dtype=tf.int64),
     }
@@ -140,6 +149,10 @@ def get_split(split_name, dataset_dir, file_pattern, num_samples, reader=None):
         'object/oriented_bbox/y2': slim.tfexample_decoder.Tensor('image/object/bbox/y2'),
         'object/oriented_bbox/y3': slim.tfexample_decoder.Tensor('image/object/bbox/y3'),
         'object/oriented_bbox/y4': slim.tfexample_decoder.Tensor('image/object/bbox/y4'),
+        'object/oriented_bbox/z1': slim.tfexample_decoder.Tensor('image/object/bbox/z1'),
+        'object/oriented_bbox/z2': slim.tfexample_decoder.Tensor('image/object/bbox/z2'),
+        'object/oriented_bbox/z3': slim.tfexample_decoder.Tensor('image/object/bbox/z3'),
+        'object/oriented_bbox/z4': slim.tfexample_decoder.Tensor('image/object/bbox/z4'),
         'object/label': slim.tfexample_decoder.Tensor('image/object/bbox/label'),
         'object/ignored': slim.tfexample_decoder.Tensor('image/object/bbox/ignored')
     }

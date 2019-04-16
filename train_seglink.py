@@ -10,6 +10,7 @@ from tf_extended import seglink
 import util
 import cv2
 from nets import seglink_symbol, anchor_layer
+from preprocessing.ssd_vgg_preprocessing import tf_summary_image
 
 
 slim = tf.contrib.slim
@@ -84,8 +85,8 @@ def config_initialization():
     util.init_logger(log_file = 'log_train_seglink_%d_%d.log'%image_shape, log_path = FLAGS.train_dir, stdout = False, mode = 'a')
     
     
-    config.init_config(image_shape, 
-                       batch_size = FLAGS.batch_size, 
+    default_anchors = config.init_config(image_shape, 
+                       batch_size = int(FLAGS.batch_size), 
                        weight_decay = FLAGS.weight_decay, 
                        num_gpus = FLAGS.num_gpus, 
                        train_with_ignored = FLAGS.train_with_ignored,
@@ -93,7 +94,7 @@ def config_initialization():
                        link_cls_loss_weight = FLAGS.link_cls_loss_weight, 
                        )
 
-    batch_size = config.batch_size
+    batch_size = int(config.batch_size)
     batch_size_per_gpu = config.batch_size_per_gpu
         
     tf.summary.scalar('batch_size', batch_size)
@@ -103,16 +104,17 @@ def config_initialization():
     
     dataset = dataset_factory.get_dataset(FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir)
     config.print_config(FLAGS, dataset)
-    return dataset
+    #print("default_anchors is {}".format(default_anchors))
+    return dataset, default_anchors
 
-def create_dataset_batch_queue(dataset):
+def create_dataset_batch_queue(dataset, default_anchors):
     with tf.device('/cpu:0'):
         with tf.name_scope(FLAGS.dataset_name + '_data_provider'):
             provider = slim.dataset_data_provider.DatasetDataProvider(
                 dataset,
                 num_readers=FLAGS.num_readers,
-                common_queue_capacity=50 * config.batch_size,
-                common_queue_min=30 * config.batch_size,
+                common_queue_capacity=50 * int(config.batch_size),
+                common_queue_min=30 * int(config.batch_size),
                 shuffle=True)
         # Get for SSD network: image, labels, bboxes.
         [image, gignored, gbboxes, x1, x2, x3, x4, y1, y2, y3, y4] = provider.get([
@@ -126,29 +128,89 @@ def create_dataset_batch_queue(dataset):
                                                          'object/oriented_bbox/y1',
                                                          'object/oriented_bbox/y2',
                                                          'object/oriented_bbox/y3',
-                                                         'object/oriented_bbox/y4'
+                                                         'object/oriented_bbox/y4',
                                                          ])
         gxs = tf.transpose(tf.stack([x1, x2, x3, x4])) #shape = (N, 4)
         gys = tf.transpose(tf.stack([y1, y2, y3, y4]))
         image = tf.identity(image, 'input_image')
         
         # Pre-processing image, labels and bboxes.
-        image, gignored, gbboxes, gxs, gys = ssd_vgg_preprocessing.preprocess_image(image, gignored, gbboxes, gxs, gys, 
+        image, gignored, gbboxes, gxs, gys = ssd_vgg_preprocessing.preprocess_image(image, gignored, gbboxes, gxs, gys,
                                                            out_shape = config.image_shape,
                                                            data_format = config.data_format, 
-                                                           is_training = True)
+                                                           is_training = True,
+                                                           default_anchors = default_anchors)
         image = tf.identity(image, 'processed_image')
         
+        def seg_loc_to_bbox(x, image):
+            height, width = image.shape[:2]
+            loc = x[:, :4]
+            bbox = loc.copy()
+            for i in range(len(bbox)):
+                #bbox[i] = [(loc[i][0] - 0.5 * loc[i][2])/width, 
+                #           (loc[i][1] - 0.5 * loc[i][3])/height, 
+                #           (loc[i][0] + 0.5 * loc[i][2])/width, 
+                #           (loc[i][1] + 0.5 * loc[i][3])/height]
+                bbox[i] = [(loc[i][1] - 0.5 * loc[i][3])/height, 
+                           (loc[i][0] - 0.5 * loc[i][2])/width,
+                           (loc[i][1] + 0.5 * loc[i][3])/height,
+                           (loc[i][0] + 0.5 * loc[i][2])/width] 
+            bbox = np.asarray(bbox)
+            return bbox
+
+
+        def bboxes_to_xys(bboxes, image_shape):
+            """Convert Seglink bboxes to xys, i.e., eight points
+            The `image_shape` is used to to make sure all points return are valid, i.e., within image area
+            """
+            if len(bboxes) == 0:
+                assert np.ndim(bboxes) == 2 and np.shape(bboxes)[-1] == 5, 'invalid `bboxes` param with shape =  ' + str(np.shape(bboxes))
+            h, w = image_shape[0:2]
+           
+            xys = np.zeros((len(bboxes), 8))
+            for bbox_idx, bbox in enumerate(bboxes):
+                bbox = ((bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox[4])
+                points = cv2.boxPoints(bbox)
+                points = np.int0(points)
+                points = np.reshape(points, -1)
+                xys[bbox_idx, :] = points
+            return xys
+
+
+        def draw_oriented_bbox(bboxes, image):
+            bboxes = bboxes_to_xys(bboxes, image.shape)
+            for bbox in bboxes:
+                if len(bbox) == 0:
+                    continue
+                points = [int(v) for v in bbox[0:8]]
+                points = np.reshape(points, (4, 2))
+                cnts = util.img.points_to_contours(points)
+                image = util.img.draw_contours(image, cnts, -1, color = [0, 0, 255], border_width = 1)
+            return image
+       
+ 
         # calculate ground truth
-        seg_label, seg_loc, link_label = seglink.tf_get_all_seglink_gt(gxs, gys, gignored)
-        
+        seg_label, seg_loc, link_label, seg_locations, bbox_mask, rects  = seglink.tf_get_all_seglink_gt(gxs, gys, gignored, image)
+        # summary bbox_mask for debug
+        bbox_mask = tf.expand_dims(bbox_mask, -1)
+        bbox_mask = tf.expand_dims(bbox_mask, 0)
+        tf.summary.image("bbox_mask", tf.cast(bbox_mask, tf.float32))
+        # summary seg_bbox loc for debug
+        seg_bbox = tf.py_func(seg_loc_to_bbox, [seg_locations, image], tf.float32)
+        seg_bbox.set_shape(seg_locations.get_shape())
+        tf_summary_image(image, seg_bbox, name="seg_locations")
+        # summary rects for debug
+        tmp = tf.py_func(draw_oriented_bbox, [rects, image], tf.float32)
+        tmp = tf.expand_dims(tmp, 0)
+        tf.summary.image("rects", tmp)
+
         # batch them
         b_image, b_seg_label, b_seg_loc, b_link_label = tf.train.batch(
             [image, seg_label, seg_loc, link_label],
-            batch_size = config.batch_size_per_gpu,
+            batch_size = int(config.batch_size_per_gpu),
             num_threads= FLAGS.num_preprocessing_threads,
             capacity = 50)
-            
+
         batch_queue = slim.prefetch_queue.prefetch_queue(
             [b_image, b_seg_label, b_seg_loc, b_link_label],
             capacity = 50) 
@@ -177,18 +239,42 @@ def create_clones(batch_queue):
         global_step = slim.create_global_step()
         learning_rate = tf.constant(FLAGS.learning_rate, name='learning_rate')
         tf.summary.scalar('learning_rate', learning_rate)
-        optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum, name='Momentum')
+        #optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum, name='Momentum')
+        #optimizer = tf.train.AdamOptimizer(learning_rate, name='Adam')
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate, name='SGD')
         
     # place clones
     seglink_loss = 0; # for summary only
     gradients = []
     for clone_idx, gpu in enumerate(config.gpus):
-        do_summary = clone_idx == 0 # only summary on the first clone
+        #do_summary = clone_idx == 0 # only summary on the first clone
+        do_summary = True
         with tf.variable_scope(tf.get_variable_scope(), reuse = True):# the variables has been created in config.init_config
             with tf.name_scope(config.clone_scopes[clone_idx]) as clone_scope:
                 with tf.device(gpu) as clone_device:
                     b_image, b_seg_label, b_seg_loc, b_link_label = batch_queue.dequeue()
                     net = seglink_symbol.SegLinkNet(inputs = b_image, data_format = config.data_format)
+                    '''
+                    def seg_loc_to_bbox(x):
+                        height, width = config.image_shape
+                        loc = x[:, :4]
+                        bbox = loc.copy()
+                        for i in range(len(bbox)):
+                            bbox[i] = [(loc[i][1] - 0.5 * loc[i][3])/height, 
+                                       (loc[i][0] - 0.5 * loc[i][2])/width,
+                                       (loc[i][1] + 0.5 * loc[i][3])/height,
+                                       (loc[i][0] + 0.5 * loc[i][2])/width] 
+                        bbox = np.asarray(bbox)
+                        return bbox
+                    seg_locs = tf.unstack(b_seg_loc)
+                    images = tf.unstack(b_image)
+                    print("seg_locs is {}".format(seg_locs))
+                    print("images is {}".format(images))
+                    for image, seg_loc in zip(images, seg_locs):
+                        bbox = tf.py_func(seg_loc_to_bbox, [seg_loc], tf.float32)
+                        bbox.set_shape((seg_loc.get_shape()[0], 4))
+                        tf_summary_image(image, bbox, "predicted")
+                    '''
                     
                     # build seglink loss
                     net.build_loss(seg_labels = b_seg_label, 
@@ -265,9 +351,9 @@ def train(train_op):
 def main(_):
     # The choice of return dataset object via initialization method maybe confusing, 
     # but I need to print all configurations in this method, including dataset information. 
-    dataset = config_initialization()   
+    dataset, default_anchors = config_initialization()   
     
-    batch_queue = create_dataset_batch_queue(dataset)
+    batch_queue = create_dataset_batch_queue(dataset, default_anchors)
     train_op = create_clones(batch_queue)
     train(train_op)
     
