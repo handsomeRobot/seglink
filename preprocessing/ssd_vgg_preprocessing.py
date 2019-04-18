@@ -366,15 +366,15 @@ def preprocess_for_train(image, labels, bboxes, xs, ys,
 
         # Distort image and bounding boxes.
         #'''
-        dst_image, labels, bboxes, xs, ys, distort_bbox = \
-            distorted_bounding_box_crop(image, labels, bboxes, xs, ys,
-                                        min_object_covered = MIN_OBJECT_COVERED,
-                                        aspect_ratio_range = CROP_ASPECT_RATIO_RANGE, 
-                                        area_range = AREA_RANGE)
+        #dst_image, labels, bboxes, xs, ys, distort_bbox = \
+        #    distorted_bounding_box_crop(image, labels, bboxes, xs, ys,
+        #                                min_object_covered = MIN_OBJECT_COVERED,
+        #                                aspect_ratio_range = CROP_ASPECT_RATIO_RANGE, 
+        #                                area_range = AREA_RANGE)
         #'''
 
         # Resize image to output size.
-        dst_image = tf_image.resize_image(dst_image, out_shape,
+        dst_image = tf_image.resize_image(image, out_shape,
                                           method=tf.image.ResizeMethod.BILINEAR,
                                           align_corners=False)
         
@@ -384,6 +384,9 @@ def preprocess_for_train(image, labels, bboxes, xs, ys,
         #dst_image = tf.py_func(draw_pic, [dst_image], tf.float32)
         #print(">>>>>> after py_func is {}".format(dst_image))
         dst_image, bboxes, xs, ys = rotate_image_with_bounding_box(dst_image, bboxes, xs, ys)
+        labels, bboxes, xs, ys = tfe.bboxes_filter_overlap(labels, bboxes, xs, ys, 
+                                                threshold=BBOX_CROP_OVERLAP, assign_negative = False)
+ 
  
         tf_summary_image(dst_image, bboxes, 'image_shape_distorted')
 

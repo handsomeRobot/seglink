@@ -194,13 +194,14 @@ def create_dataset_batch_queue(dataset, default_anchors):
         # summary bbox_mask for debug
         bbox_mask = tf.expand_dims(bbox_mask, -1)
         bbox_mask = tf.expand_dims(bbox_mask, 0)
-        tf.summary.image("bbox_mask", tf.cast(bbox_mask, tf.float32))
+        tmp = image + tf.cast(bbox_mask, tf.float32) * 50
+        tf.summary.image("bbox_mask", tf.cast(tmp, tf.float32))
         # summary seg_bbox loc for debug
-        seg_bbox = tf.py_func(seg_loc_to_bbox, [seg_locations, image], tf.float32)
-        seg_bbox.set_shape(seg_locations.get_shape())
-        tf_summary_image(image, seg_bbox, name="seg_locations")
+        #seg_bbox = tf.py_func(seg_loc_to_bbox, [seg_locations, image], tf.float32)
+        #seg_bbox.set_shape(seg_locations.get_shape())
+        #tf_summary_image(image, seg_bbox, name="seg_locations")
         # summary rects for debug
-        tmp = tf.py_func(draw_oriented_bbox, [rects, image], tf.float32)
+        tmp = tf.py_func(draw_oriented_bbox, [seg_locations, image], tf.float32)
         tmp = tf.expand_dims(tmp, 0)
         tf.summary.image("rects", tmp)
 

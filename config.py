@@ -38,7 +38,7 @@ feat_layers = ['conv4_3','fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
 max_height_ratio = 1.5
 # prior_scaling = [0.1, 0.2, 0.1, 0.2, 20.0]
 #prior_scaling = [0.2, 0.5, 0.2, 0.5, 20.0]
-prior_scaling = [1.0] * 5
+prior_scaling = [1.0, 1.0, 1.0, 1.0, 0.5]
 
 max_neg_pos_ratio = 3
 

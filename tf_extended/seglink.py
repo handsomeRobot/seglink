@@ -1,4 +1,5 @@
 import cv2
+import math
 import numpy as np
 import tensorflow as tf
 
@@ -714,7 +715,6 @@ def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred,
         image_shape = config.image_shape
 
     seg_groups = group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold);
-    print("seg_groups is {}".format(seg_groups))
     seg_locs = decode_seg_offsets_pred(seg_offsets_pred)
     
     bboxes = []
@@ -722,10 +722,12 @@ def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred,
     for group in seg_groups:
         group = [seg_locs[idx, :] for idx in group]
         bbox = combine_segs(group)
-        image_h, image_w = image_shape[0:2]
-        scale = [image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, 1]
-        bbox = np.asarray(bbox) * scale
-        bboxes.append(bbox)
+        #print(">>>>> bbox is {}".format(bbox))
+        #bbox = list(bbox)
+        #bbox[4] = (image_h / ref_h) / (image_w / ref_w) * math.tan(bbox[4] * math.pi / 180)
+        #bbox[4] = math.atan(bbox[4]) * 180 / math.pi
+        #bbox = np.asarray(bbox) * scale
+        bboxes.append(np.asarray(bbox))
         
     bboxes = bboxes_to_xys(bboxes, image_shape)
     return np.asarray(bboxes, dtype = np.float32)
@@ -752,6 +754,21 @@ def combine_segs(segs, return_bias = False):
     ## the slope
     bar_theta = np.mean(segs[:, 4])# average theta
     k = tan(bar_theta);
+    # get the slope by averaging the theta between neighbour center points
+    '''
+    center_points = segs[:, :2]
+    center_points = center_points[center_points[:, 0].argsort()] # sort by x
+    print(">>>>> center_points is {}".format(center_points))
+    theta_collections = []
+    for pidx in range(len(center_points) - 1):
+        p = center_points[pidx]
+        pright = center_points[pidx + 1]
+        theta = math.atan((pright[1] - p[1]) / (pright[0] - p[0])) * 180 / math.pi
+        theta_collections.append(theta)
+    print(">>>>>>> theta_collections is {}".format(theta_collections))
+    bar_theta = sum(theta_collections) / len(theta_collections)
+    k = tan(bar_theta);
+    '''
     
     ## the bias: minimize sum (k*x_i + b - y_i)^2
     ### let c_i = k*x_i - y_i
@@ -806,6 +823,9 @@ def bboxes_to_xys(bboxes, image_shape):
     assert np.ndim(bboxes) == 2 and np.shape(bboxes)[-1] == 5, 'invalid `bboxes` param with shape =  ' + str(np.shape(bboxes))
     
     h, w = image_shape[0:2]
+    ref_h, ref_w = config.image_shape
+    h_scale = h * 1.0 / ref_h
+    w_scale = w * 1.0 / ref_w
     def get_valid_x(x):
         if x < 0:
             return 0
@@ -824,8 +844,10 @@ def bboxes_to_xys(bboxes, image_shape):
     for bbox_idx, bbox in enumerate(bboxes):
         bbox = ((bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox[4])
         points = cv2.boxPoints(bbox)
-        points = np.int0(points)
+        #points = np.int0(points)
         for i_xy, (x, y) in enumerate(points):
+            x = int(w_scale * x)
+            y = int(h_scale * y)
             x = get_valid_x(x)
             y = get_valid_y(y)
             points[i_xy, :] = [x, y]

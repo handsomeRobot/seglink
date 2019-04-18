@@ -132,12 +132,17 @@ def eval():
           util.io.write_lines(filename, lines)
           print('result has been written to:', filename)
           
+
+        #import os, cv2
+        #resized_path = "/home/kxu/workspace/seglink/images_resized"
+        #os.mkdir(resized_path)
         for iter, image_name in enumerate(image_names):
             image_data = util.img.imread(util.io.join_path(FLAGS.dataset_dir, image_name), rgb = True)
             image_name = image_name.split('.')[0]
-            image_bboxes = sess.run([bboxes_pred], feed_dict = {image:image_data, image_shape:image_data.shape})
+            image_bboxes, resized = sess.run([bboxes_pred, processed_image], feed_dict = {image:image_data, image_shape:image_data.shape})
+            #cv2.imwrite(os.path.join(resized_path, image_name) + ".jpg", resized)
             print('%d/%d: %s'%(iter + 1, len(image_names), image_name))
-            write_result_as_txt(image_name, image_bboxes[0], txt_path)
+            write_result_as_txt(image_name, image_bboxes, txt_path)
                 
         # create zip file for icdar2015
         cmd = 'cd %s;zip -j %s %s/*'%(dump_path, zip_path, txt_path);

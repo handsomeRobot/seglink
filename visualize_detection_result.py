@@ -28,7 +28,6 @@ def draw_bbox(image_data, line, color):
             color = color)
 
     def draw_oriented_bbox():
-        print("data is {}".format(data))
         if data == ['']: 
             return
         points = [int(v) for v in data[0:8]]
