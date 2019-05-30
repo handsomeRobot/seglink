@@ -15,7 +15,7 @@ data_format = 'NHWC'
 # height, width
 image_shape = (512, 512) 
 
-batch_size = 8
+batch_size = 1
 weight_decay = 0.0005 
 num_gpus = 1 
 

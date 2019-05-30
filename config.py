@@ -22,13 +22,15 @@ global clone_scopes
 # =========================================================================#
 # basic config values
 # =========================================================================#
+gpu_device = "0"
 anchor_offset = 0.5    
 anchor_scale_gamma = 1.5
 feat_layers = ['conv4_3','fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
 max_height_ratio = 2
+allow_soft_placement = True
 
 # the weight applied to loss of cx, cy, w, h, theta
-prior_scaling = [0.1, 0.1, 0.1, 0.1, 20]
+prior_scaling = [0.1, 0.2, 0.1, 0.2, 20]
 
 max_neg_pos_ratio = 6
 data_format = 'NHWC'
@@ -36,7 +38,7 @@ data_format = 'NHWC'
 # height, width
 image_shape = (512, 512) 
 
-batch_size = 8
+batch_size = 1
 weight_decay = 0.0005 
 num_gpus = 1 
 

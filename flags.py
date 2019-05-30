@@ -1,31 +1,42 @@
 import tensorflow as tf
 
-# =========================================================================== #
-# Checkpoint and running Flags
-# =========================================================================== #
-tf.app.flags.DEFINE_string('train_dir', None, 
-                           'the path to store checkpoints and eventfiles for summaries')
-
-tf.app.flags.DEFINE_string('checkpoint_path', None, 
+# ========================================================================== #
+# Global Flags
+# ========================================================================== #
+tf.app.flags.DEFINE_string(
+   'checkpoint_path', None, 
    'the path of pretrained model to be used. If there are checkpoints in train_dir, this config will be ignored.')
-
-tf.app.flags.DEFINE_string('config_file', None, 'config_file')
-
-# =========================================================================== # 
-# Dataset Flags.
-# =========================================================================== #
 tf.app.flags.DEFINE_string(
-    'dataset_name', None, 'The name of the dataset to load.')
-tf.app.flags.DEFINE_string(
-    'dataset_split_name', 'train', 'The name of the train/test split.')
+        'config_file', None, 'config_file')
 tf.app.flags.DEFINE_string(
     'dataset_dir', None, 'The directory where the dataset files are stored.')
 
 # =========================================================================== #
-# Inference graph export flags
+# Train Flags 
+# =========================================================================== #
+tf.app.flags.DEFINE_string(
+        'train_dir', None, 
+        'the path to store checkpoints and eventfiles for summaries')
+tf.app.flags.DEFINE_string(
+    'dataset_name', None, 'The name of the dataset to load.')
+tf.app.flags.DEFINE_string(
+    'dataset_split_name', 'train', 'The name of the train/test split.')
+
+# =========================================================================== #
+# Inference Flags 
+# =========================================================================== #
+tf.app.flags.DEFINE_string('inference_graph', None, 'inference graph')
+
+# =========================================================================== #
+# Inference_graph Export Flags
 # =========================================================================== #
 tf.app.flags.DEFINE_string("output_dir", None, "The directory for the output graph files.")
-tf.app.flags.DEFINE_string("checkpoint", None, "The directory of the original checkpoints.")
+
+# =========================================================================== #
+# For Jupyter Notebook Usage
+# =========================================================================== #
+tf.app.flags.DEFINE_string('f', '', 'kernel')
+
 
 FLAGS = tf.app.flags.FLAGS
 

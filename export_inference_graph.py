@@ -15,22 +15,23 @@ def main(_):
     config.init_config()
     
     with tf.variable_scope(tf.get_variable_scope(), reuse=True):
-        image = tf.placeholder(dtype=tf.int32, shape = [None, None, 3])
-        image_shape = tf.placeholder(dtype = tf.int32, shape = [3, ])
+        image = tf.placeholder(dtype=tf.int32, shape = [None, None, 3], name='input_image')
         processed_image, _, _, _, _ = ssd_vgg_preprocessing.preprocess_image(image, None, None, None, None, 
                                                    out_shape = config.image_shape,
                                                    data_format = config.data_format, 
                                                    is_training = False)
         b_image = tf.expand_dims(processed_image, axis = 0)
-        b_shape = tf.expand_dims(image_shape, axis = 0)
         net = seglink_symbol.SegLinkNet(inputs = b_image, data_format = config.data_format)
+        '''
         bboxes_pred = seglink.tf_seglink_to_bbox(net.seg_scores, net.link_scores, 
                                                  net.seg_offsets, 
                                                  image_shape = b_shape, 
                                                  seg_conf_threshold = config.seg_conf_threshold,
                                                  link_conf_threshold = config.link_conf_threshold)
+        '''
 
-    predictions = {'boxes': bboxes_pred}
+    predictions = {'seg_scores': net.seg_scores, 'link_scores': net.link_scores, 
+                   'seg_offsets': net.seg_offsets}
     for key, value in predictions.items():
         predictions[key] = tf.identity(value, name=key)
 
@@ -48,7 +49,7 @@ def main(_):
       with session.Session() as sess:
         saver = saver_lib.Saver(saver_def=input_saver_def,
                                 save_relative_paths=True)
-        saver.restore(sess, FLAGS.checkpoint)
+        saver.restore(sess, FLAGS.checkpoint_path)
         saver.save(sess, output_ckpt_path)
 
     frozen_graph_path = os.path.join(FLAGS.output_dir,
@@ -56,7 +57,7 @@ def main(_):
     frozen_graph_def = freeze_graph.freeze_graph_with_def_protos(
         input_graph_def=tf.get_default_graph().as_graph_def(),
         input_saver_def=input_saver_def,
-        input_checkpoint=FLAGS.checkpoint,
+        input_checkpoint=FLAGS.checkpoint_path,
         output_node_names=output_node_names,
         restore_op_name='',
         filename_tensor_name='',

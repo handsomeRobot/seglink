@@ -7,7 +7,7 @@ feat_layers = ['conv4_3','fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
 max_height_ratio = 2
 
 # the weight applied to loss of cx, cy, w, h, theta
-prior_scaling = [0.1, 0.1, 0.1, 0.1, 10]
+prior_scaling = [0.1, 0.2, 0.1, 0.2, 20]
 
 max_neg_pos_ratio = 6
 data_format = 'NHWC'

@@ -15,7 +15,6 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import util
-import config
 from tf_extended import math as tfe_math
 
 def bboxes_resize(bbox_ref, bboxes, xs, ys, name=None):
