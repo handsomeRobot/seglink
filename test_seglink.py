@@ -16,52 +16,17 @@ from nets import seglink_symbol, anchor_layer
 
 slim = tf.contrib.slim
 import config
-# =========================================================================== #
-# model threshold parameters
-# =========================================================================== #
-tf.app.flags.DEFINE_float('seg_conf_threshold', 0.0, 
-                          'the threshold on the confidence of segment')
-tf.app.flags.DEFINE_float('link_conf_threshold', 0.0, 
-                          'the threshold on the confidence of linkage')
+from flags import FLAGS
 
-# =========================================================================== #
-# Checkpoint and running Flags
-# =========================================================================== #
-tf.app.flags.DEFINE_string('checkpoint_path', None, 
-   'the path of checkpoint to be evaluated. If it is a directory containing many checkpoints, the lastest will be evaluated.')
-tf.app.flags.DEFINE_float('gpu_memory_fraction', -1, 'the gpu memory fraction to be used. If less than 0, allow_growth = True is used.')
-
-
-# =========================================================================== #
-# Dataset Flags.
-# =========================================================================== #
-tf.app.flags.DEFINE_string(
-    'dataset_name', 'icdar2015', 'The name of the dataset to load.')
-tf.app.flags.DEFINE_string(
-    'dataset_split_name', 'test', 'The name of the train/test split.')
-tf.app.flags.DEFINE_string('dataset_dir', 
-           util.io.get_absolute_path('~/dataset/ICDAR2015/Challenge4/ch4_test_images'), 
-           'The directory where the dataset files are stored.')
-tf.app.flags.DEFINE_string(
-    'model_name', 'seglink_vgg', 'The name of the architecture to train.')
-tf.app.flags.DEFINE_integer('eval_image_width', 512, 'Train image size')
-tf.app.flags.DEFINE_integer('eval_image_height', 512, 'Train image size')
-
-
-FLAGS = tf.app.flags.FLAGS
 
 def config_initialization():
-    # image shape and feature layers shape inference
-    image_shape = (FLAGS.eval_image_height, FLAGS.eval_image_width)
-    
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
     tf.logging.set_verbosity(tf.logging.DEBUG)
     
-    config.init_config(image_shape, batch_size = 1, seg_conf_threshold = FLAGS.seg_conf_threshold,
-                       link_conf_threshold = FLAGS.link_conf_threshold)
+    config.init_config()
 
-    util.proc.set_proc_name('test' + FLAGS.model_name)
+    util.proc.set_proc_name('test' + config.model_name)
 
     
 def write_result(image_name, image_data, bboxes, path):
@@ -96,10 +61,10 @@ def eval():
     image_names = util.io.ls(FLAGS.dataset_dir)
     
     sess_config = tf.ConfigProto(log_device_placement = False, allow_soft_placement = True)
-    if FLAGS.gpu_memory_fraction < 0:
+    if config.gpu_memory_fraction < 0:
         sess_config.gpu_options.allow_growth = True
-    elif FLAGS.gpu_memory_fraction > 0:
-        sess_config.gpu_options.per_process_gpu_memory_fraction = FLAGS.gpu_memory_fraction;
+    elif config.gpu_memory_fraction > 0:
+        sess_config.gpu_options.per_process_gpu_memory_fraction = config.gpu_memory_fraction;
     
     checkpoint_dir = util.io.get_dir(FLAGS.checkpoint_path)
     logdir = util.io.join_path(FLAGS.checkpoint_path, 'test', FLAGS.dataset_name + '_' +FLAGS.dataset_split_name)

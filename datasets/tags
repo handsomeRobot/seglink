@@ -1,0 +1,68 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+DatasetConfig	dataset_factory.py	/^class DatasetConfig():$/;"	c
+SynthTextDataFetcher	synthtext_to_tfrecords.py	/^class SynthTextDataFetcher():$/;"	c
+__init__	dataset_factory.py	/^    def __init__(self, file_pattern, split_sizes):$/;"	m	class:DatasetConfig
+__init__	synthtext_to_tfrecords.py	/^    def __init__(self, mat_path, root_path):$/;"	m	class:SynthTextDataFetcher
+_load_mat	synthtext_to_tfrecords.py	/^    def _load_mat(self):$/;"	m	class:SynthTextDataFetcher
+bytes_feature	dataset_utils.py	/^def bytes_feature(value):$/;"	f
+convert_to_example	dataset_utils.py	/^def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxes, oriented_bboxes, shape, vertex_num):$/;"	f
+cvt_to_tfrecords	icdar2013_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path):$/;"	f
+cvt_to_tfrecords	icdar2015_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path):$/;"	f
+cvt_to_tfrecords	kuaidi_cut_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path):$/;"	f
+cvt_to_tfrecords	scut_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path):$/;"	f
+cvt_to_tfrecords	synthtext_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path, records_per_file = 50000):$/;"	f
+cvt_to_tfrecords	table_extract_to_tfrecords.py	/^def cvt_to_tfrecords(output_path , data_path, gt_path):$/;"	f
+datasets_map	dataset_factory.py	/^datasets_map = {$/;"	v
+fetch_record	synthtext_to_tfrecords.py	/^    def fetch_record(self, image_idx):$/;"	m	class:SynthTextDataFetcher
+file_pattern	dataset_factory.py	/^    file_pattern = 'SynthText_*.tfrecord',$/;"	v
+file_pattern	dataset_factory.py	/^    file_pattern = 'kuaidi_cut_*.tfrecord',$/;"	v
+file_pattern	dataset_factory.py	/^    file_pattern = 'scut_%s.tfrecord',$/;"	v
+file_pattern	dataset_factory.py	/^    file_pattern = 'table_extract_test_*.tfrecord',$/;"	v
+float_feature	dataset_utils.py	/^def float_feature(value):$/;"	f
+get_dataset	dataset_factory.py	/^def get_dataset(dataset_name, split_name, dataset_dir, reader=None):$/;"	f
+get_image_path	synthtext_to_tfrecords.py	/^    def get_image_path(self, idx):$/;"	m	class:SynthTextDataFetcher
+get_num_words	synthtext_to_tfrecords.py	/^    def get_num_words(self, idx):$/;"	m	class:SynthTextDataFetcher
+get_split	dataset_utils.py	/^def get_split(split_name, dataset_dir, file_pattern, num_samples, reader=None):$/;"	f
+get_txt	synthtext_to_tfrecords.py	/^    def get_txt(self, image_idx, word_idx):$/;"	m	class:SynthTextDataFetcher
+get_word_bbox	synthtext_to_tfrecords.py	/^    def get_word_bbox(self, img_idx, word_idx):$/;"	m	class:SynthTextDataFetcher
+icdar2013	dataset_factory.py	/^icdar2013 = DatasetConfig($/;"	v
+icdar2015	dataset_factory.py	/^icdar2015 = DatasetConfig($/;"	v
+image_to_tfexample	dataset_utils.py	/^def image_to_tfexample(image_data, image_format, height, width, class_id):$/;"	f
+int64_feature	dataset_utils.py	/^def int64_feature(value):$/;"	f
+kuaidi_cut	dataset_factory.py	/^kuaidi_cut = DatasetConfig($/;"	v
+mat_path	synthtext_to_tfrecords.py	/^    mat_path = util.io.get_absolute_path('~\/dataset\/SynthText\/gt.mat')$/;"	v
+normalize_bbox	synthtext_to_tfrecords.py	/^    def normalize_bbox(self, xys, width, height):$/;"	m	class:SynthTextDataFetcher
+output_dir	icdar2013_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/ICDAR\/')$/;"	v
+output_dir	icdar2015_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/ICDAR\/')$/;"	v
+output_dir	kuaidi_cut_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/table_extract_test_0523\/')$/;"	v
+output_dir	scut_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/SCUT\/')$/;"	v
+output_dir	synthtext_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/SynthText\/')$/;"	v
+output_dir	table_extract_to_tfrecords.py	/^    output_dir = util.io.get_absolute_path('~\/dataset\/SSD-tf\/table_extract_test_0528\/')$/;"	v
+root_dir	icdar2013_to_tfrecords.py	/^    root_dir = util.io.get_absolute_path('~\/dataset\/ICDAR2015\/Challenge2.Task123\/')$/;"	v
+root_dir	icdar2015_to_tfrecords.py	/^    root_dir = util.io.get_absolute_path('~\/dataset\/ICDAR2015\/Challenge4\/')$/;"	v
+root_dir	kuaidi_cut_to_tfrecords.py	/^    root_dir = util.io.get_absolute_path('\/home\/kxu\/workspace\/data\/table_obj_detect_sample')$/;"	v
+root_dir	scut_to_tfrecords.py	/^    root_dir = util.io.get_absolute_path('~\/dataset\/SCUT\/SCUT_FORU_DB_Release\/English2k\/')$/;"	v
+root_dir	table_extract_to_tfrecords.py	/^    root_dir = util.io.get_absolute_path('\/home\/kxu\/workspace\/data\/table_seglink_poly_0528')$/;"	v
+root_path	synthtext_to_tfrecords.py	/^    root_path = util.io.get_absolute_path('~\/dataset\/SynthText\/')$/;"	v
+scut	dataset_factory.py	/^scut = DatasetConfig($/;"	v
+slim	dataset_utils.py	/^slim = tf.contrib.slim$/;"	v
+split_sizes	dataset_factory.py	/^    split_sizes = {$/;"	v
+synthtext	dataset_factory.py	/^synthtext = DatasetConfig($/;"	v
+table_extract	dataset_factory.py	/^table_extract = DatasetConfig($/;"	v
+test_data_dir	icdar2013_to_tfrecords.py	/^    test_data_dir = util.io.join_path(root_dir,'Challenge2_Test_Task12_Images')$/;"	v
+test_gt_dir	icdar2013_to_tfrecords.py	/^    test_gt_dir = util.io.join_path(root_dir,'Challenge2_Test_Task1_GT')$/;"	v
+training_data_dir	icdar2013_to_tfrecords.py	/^    training_data_dir = util.io.join_path(root_dir, 'Challenge2_Training_Task12_Images')$/;"	v
+training_data_dir	icdar2015_to_tfrecords.py	/^    training_data_dir = util.io.join_path(root_dir, 'ch4_training_images')$/;"	v
+training_data_dir	kuaidi_cut_to_tfrecords.py	/^    training_data_dir = util.io.join_path(root_dir, 'images')$/;"	v
+training_data_dir	scut_to_tfrecords.py	/^    training_data_dir = util.io.join_path(root_dir, 'word_img')$/;"	v
+training_data_dir	table_extract_to_tfrecords.py	/^    training_data_dir = util.io.join_path(root_dir, 'images')$/;"	v
+training_gt_dir	icdar2013_to_tfrecords.py	/^    training_gt_dir = util.io.join_path(root_dir,'Challenge2_Training_Task1_GT')$/;"	v
+training_gt_dir	icdar2015_to_tfrecords.py	/^    training_gt_dir = util.io.join_path(root_dir,'ch4_training_localization_transcription_gt')$/;"	v
+training_gt_dir	kuaidi_cut_to_tfrecords.py	/^    training_gt_dir = util.io.join_path(root_dir, 'annotations')$/;"	v
+training_gt_dir	scut_to_tfrecords.py	/^    training_gt_dir = util.io.join_path(root_dir,'word_annotation')$/;"	v
+training_gt_dir	table_extract_to_tfrecords.py	/^    training_gt_dir = util.io.join_path(root_dir, 'annotations')$/;"	v

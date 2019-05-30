@@ -19,16 +19,12 @@ def cvt_to_tfrecords(output_path , data_path, gt_path):
             labels_text = [];
             ignored = []
             path = util.io.join_path(data_path, image_name);
-            print("\tconverting image: %d/%d %s"%(idx, len(image_names), image_name))
-            print("path is {}".format(path))
             image_data = tf.gfile.GFile(path, 'rb')
-            print("image data is {}".format(image_data))
             image_data = image_data.read()
             
             image = util.img.imread(path, rgb = True);
             shape = image.shape
             h, w = shape[0:2];
-            print("height is {}, width is {}".format(h, w))
             h *= 1.0;
             w *= 1.0;
             image_name = util.str.split(image_name, '.')[0];
@@ -66,6 +62,7 @@ def cvt_to_tfrecords(output_path , data_path, gt_path):
                 ignored.append(0)
                 labels_text.append(name); 
                 labels.append(1);
+                print("bboxes is {}".format(bboxes))
             if flag:
                 continue
 
@@ -99,13 +96,15 @@ def cvt_to_tfrecords(output_path , data_path, gt_path):
             tfrecord_writer.write(example.SerializeToString())
         
 if __name__ == "__main__":
-    root_dir = util.io.get_absolute_path('/home/kxu/workspace/data/kuaidi/2018_11_13_kuaidi_cut/label_modified')
-    output_dir = util.io.get_absolute_path('~/dataset/SSD-tf/kuaidi_cut_label_modified/')
+    #root_dir = util.io.get_absolute_path('/home/kxu/workspace/data/table_seglink_0523')
+    #root_dir = util.io.get_absolute_path('/home/kxu/workspace/data/seg_table_complx_test_0523')
+    root_dir = util.io.get_absolute_path('/home/kxu/workspace/data/table_obj_detect_sample')
+    output_dir = util.io.get_absolute_path('~/dataset/SSD-tf/table_extract_test_0523/')
     util.io.mkdir(output_dir);
 
     training_data_dir = util.io.join_path(root_dir, 'images')
-    training_gt_dir = util.io.join_path(root_dir,'annotations')
-    cvt_to_tfrecords(output_path = util.io.join_path(output_dir, 'kuaidi_cut_label_modified.tfrecord'), data_path = training_data_dir, gt_path = training_gt_dir)
+    training_gt_dir = util.io.join_path(root_dir, 'annotations')
+    cvt_to_tfrecords(output_path = util.io.join_path(output_dir, 'table_extract_test_0523.tfrecord'), data_path = training_data_dir, gt_path = training_gt_dir)
 
 #     test_data_dir = util.io.join_path(root_dir, 'ch4_test_images')
 #     test_gt_dir = util.io.join_path(root_dir,'ch4_test_localization_transcription_gt')

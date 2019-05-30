@@ -1,6 +1,7 @@
 #test code to make sure the ground truth calculation and data batch works well.
 
 import numpy as np
+import os
 import tensorflow as tf # test
 from tensorflow.python.ops import control_flow_ops
 
@@ -11,88 +12,18 @@ import util
 import cv2
 from nets import seglink_symbol, anchor_layer
 from preprocessing.ssd_vgg_preprocessing import tf_summary_image
-
+from flags import FLAGS
 
 slim = tf.contrib.slim
 import config
-# =========================================================================== #
-# Checkpoint and running Flags
-# =========================================================================== #
-tf.app.flags.DEFINE_bool('train_with_ignored', False, 
-                           'whether to use ignored bbox (in ic15) in training.')
-tf.app.flags.DEFINE_float('seg_loc_loss_weight', 1.0, 'the loss weight of segment localization')
-tf.app.flags.DEFINE_float('link_cls_loss_weight', 1.0, 'the loss weight of linkage classification loss')
-
-tf.app.flags.DEFINE_string('train_dir', None, 
-                           'the path to store checkpoints and eventfiles for summaries')
-
-tf.app.flags.DEFINE_string('checkpoint_path', None, 
-   'the path of pretrained model to be used. If there are checkpoints in train_dir, this config will be ignored.')
-
-tf.app.flags.DEFINE_float('gpu_memory_fraction', -1, 
-                          'the gpu memory fraction to be used. If less than 0, allow_growth = True is used.')
-
-tf.app.flags.DEFINE_integer('batch_size', None, 'The number of samples in each batch.')
-tf.app.flags.DEFINE_integer('num_gpus', 1, 'The number of gpus can be used.')
-tf.app.flags.DEFINE_integer('max_number_of_steps', 1000000, 'The maximum number of training steps.')
-tf.app.flags.DEFINE_integer('log_every_n_steps', 1, 'log frequency')
-tf.app.flags.DEFINE_bool("ignore_missing_vars", True, '')
-tf.app.flags.DEFINE_string('checkpoint_exclude_scopes', None, 'checkpoint_exclude_scopes')
-
-# =========================================================================== #
-# Optimizer configs.
-# =========================================================================== #
-tf.app.flags.DEFINE_float('learning_rate', 0.001, 'learning rate.')
-tf.app.flags.DEFINE_float('momentum', 0.9, 'The momentum for the MomentumOptimizer')
-tf.app.flags.DEFINE_float('weight_decay', 0.0005, 'The weight decay on the model weights.')
-tf.app.flags.DEFINE_bool('using_moving_average', False, 'Whether to use ExponentionalMovingAverage')
-tf.app.flags.DEFINE_float('moving_average_decay', 0.9999, 'The decay rate of ExponentionalMovingAverage')
-
-# =========================================================================== #
-# I/O and preprocessing Flags.
-# =========================================================================== #
-tf.app.flags.DEFINE_integer(
-    'num_readers', 1,
-    'The number of parallel readers that read data from the dataset.')
-tf.app.flags.DEFINE_integer(
-    'num_preprocessing_threads', 1,
-    'The number of threads used to create the batches.')
-
-# =========================================================================== #
-# Dataset Flags.
-# =========================================================================== #
-tf.app.flags.DEFINE_string(
-    'dataset_name', None, 'The name of the dataset to load.')
-tf.app.flags.DEFINE_string(
-    'dataset_split_name', 'train', 'The name of the train/test split.')
-tf.app.flags.DEFINE_string(
-    'dataset_dir', None, 'The directory where the dataset files are stored.')
-tf.app.flags.DEFINE_string(
-    'model_name', 'seglink_vgg', 'The name of the architecture to train.')
-tf.app.flags.DEFINE_integer('train_image_width', 512, 'Train image size')
-tf.app.flags.DEFINE_integer('train_image_height', 512, 'Train image size')
-
-
-FLAGS = tf.app.flags.FLAGS
 
 def config_initialization():
-    # image shape and feature layers shape inference
-    image_shape = (FLAGS.train_image_height, FLAGS.train_image_width)
-    
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
     tf.logging.set_verbosity(tf.logging.DEBUG)
-    util.init_logger(log_file = 'log_train_seglink_%d_%d.log'%image_shape, log_path = FLAGS.train_dir, stdout = False, mode = 'a')
+    util.init_logger(log_file = 'log_train_seglink_%d_%d.log'%config.image_shape, log_path = FLAGS.train_dir, stdout = False, mode = 'a')
     
-    
-    default_anchors = config.init_config(image_shape, 
-                       batch_size = int(FLAGS.batch_size), 
-                       weight_decay = FLAGS.weight_decay, 
-                       num_gpus = FLAGS.num_gpus, 
-                       train_with_ignored = FLAGS.train_with_ignored,
-                       seg_loc_loss_weight = FLAGS.seg_loc_loss_weight, 
-                       link_cls_loss_weight = FLAGS.link_cls_loss_weight, 
-                       )
+    default_anchors = config.init_config()
 
     batch_size = int(config.batch_size)
     batch_size_per_gpu = config.batch_size_per_gpu
@@ -100,19 +31,27 @@ def config_initialization():
     tf.summary.scalar('batch_size', batch_size)
     tf.summary.scalar('batch_size_per_gpu', batch_size_per_gpu)
 
-    util.proc.set_proc_name(FLAGS.model_name + '_' + FLAGS.dataset_name)
+    util.proc.set_proc_name(config.model_name + '_' + FLAGS.dataset_name)
     
     dataset = dataset_factory.get_dataset(FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir)
+
+    # append detailed log to train dir
     config.print_config(FLAGS, dataset)
-    #print("default_anchors is {}".format(default_anchors))
+
+    # copy the config file to train dir
+    if not os.path.exists(FLAGS.train_dir):
+        tf.gfile.MakeDirs(FLAGS.train_dir)
+    tf.gfile.Copy(FLAGS.config_file, os.path.join(FLAGS.train_dir, 'train_config.py'), overwrite=True)
+
     return dataset, default_anchors
+
 
 def create_dataset_batch_queue(dataset, default_anchors):
     with tf.device('/cpu:0'):
         with tf.name_scope(FLAGS.dataset_name + '_data_provider'):
             provider = slim.dataset_data_provider.DatasetDataProvider(
                 dataset,
-                num_readers=FLAGS.num_readers,
+                num_readers=config.num_readers,
                 common_queue_capacity=50 * int(config.batch_size),
                 common_queue_min=30 * int(config.batch_size),
                 shuffle=True)
@@ -147,10 +86,6 @@ def create_dataset_batch_queue(dataset, default_anchors):
             loc = x[:, :4]
             bbox = loc.copy()
             for i in range(len(bbox)):
-                #bbox[i] = [(loc[i][0] - 0.5 * loc[i][2])/width, 
-                #           (loc[i][1] - 0.5 * loc[i][3])/height, 
-                #           (loc[i][0] + 0.5 * loc[i][2])/width, 
-                #           (loc[i][1] + 0.5 * loc[i][3])/height]
                 bbox[i] = [(loc[i][1] - 0.5 * loc[i][3])/height, 
                            (loc[i][0] - 0.5 * loc[i][2])/width,
                            (loc[i][1] + 0.5 * loc[i][3])/height,
@@ -179,14 +114,15 @@ def create_dataset_batch_queue(dataset, default_anchors):
 
         def draw_oriented_bbox(bboxes, image):
             bboxes = bboxes_to_xys(bboxes, image.shape)
+            rst_image = image.copy()
             for bbox in bboxes:
                 if len(bbox) == 0:
                     continue
                 points = [int(v) for v in bbox[0:8]]
                 points = np.reshape(points, (4, 2))
                 cnts = util.img.points_to_contours(points)
-                image = util.img.draw_contours(image, cnts, -1, color = [0, 0, 255], border_width = 1)
-            return image
+                rst_image = util.img.draw_contours(rst_image.copy(), cnts, -1, color = [0, 0, 255], border_width = 1)
+            return rst_image
        
  
         # calculate ground truth
@@ -196,12 +132,12 @@ def create_dataset_batch_queue(dataset, default_anchors):
         bbox_mask = tf.expand_dims(bbox_mask, 0)
         tmp = image + tf.cast(bbox_mask, tf.float32) * 50
         tf.summary.image("bbox_mask", tf.cast(tmp, tf.float32))
-        # summary seg_bbox loc for debug
-        #seg_bbox = tf.py_func(seg_loc_to_bbox, [seg_locations, image], tf.float32)
-        #seg_bbox.set_shape(seg_locations.get_shape())
-        #tf_summary_image(image, seg_bbox, name="seg_locations")
         # summary rects for debug
         tmp = tf.py_func(draw_oriented_bbox, [seg_locations, image], tf.float32)
+        tmp = tf.expand_dims(tmp, 0)
+        tf.summary.image("seg_locations", tmp)
+
+        tmp = tf.py_func(draw_oriented_bbox, [rects, image], tf.float32)
         tmp = tf.expand_dims(tmp, 0)
         tf.summary.image("rects", tmp)
 
@@ -209,7 +145,7 @@ def create_dataset_batch_queue(dataset, default_anchors):
         b_image, b_seg_label, b_seg_loc, b_link_label = tf.train.batch(
             [image, seg_label, seg_loc, link_label],
             batch_size = int(config.batch_size_per_gpu),
-            num_threads= FLAGS.num_preprocessing_threads,
+            num_threads= config.num_preprocessing_threads,
             capacity = 50)
 
         batch_queue = slim.prefetch_queue.prefetch_queue(
@@ -238,9 +174,9 @@ def sum_gradients(clone_grads):
 def create_clones(batch_queue):        
     with tf.device('/cpu:0'):
         global_step = slim.create_global_step()
-        learning_rate = tf.constant(FLAGS.learning_rate, name='learning_rate')
+        learning_rate = tf.constant(config.learning_rate, name='learning_rate')
         tf.summary.scalar('learning_rate', learning_rate)
-        #optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum, name='Momentum')
+        #optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=config.momentum, name='Momentum')
         #optimizer = tf.train.AdamOptimizer(learning_rate, name='Adam')
         optimizer = tf.train.GradientDescentOptimizer(learning_rate, name='SGD')
         
@@ -255,35 +191,57 @@ def create_clones(batch_queue):
                 with tf.device(gpu) as clone_device:
                     b_image, b_seg_label, b_seg_loc, b_link_label = batch_queue.dequeue()
                     net = seglink_symbol.SegLinkNet(inputs = b_image, data_format = config.data_format)
-                    '''
-                    def seg_loc_to_bbox(x):
-                        height, width = config.image_shape
-                        loc = x[:, :4]
-                        bbox = loc.copy()
-                        for i in range(len(bbox)):
-                            bbox[i] = [(loc[i][1] - 0.5 * loc[i][3])/height, 
-                                       (loc[i][0] - 0.5 * loc[i][2])/width,
-                                       (loc[i][1] + 0.5 * loc[i][3])/height,
-                                       (loc[i][0] + 0.5 * loc[i][2])/width] 
-                        bbox = np.asarray(bbox)
-                        return bbox
-                    seg_locs = tf.unstack(b_seg_loc)
-                    images = tf.unstack(b_image)
-                    print("seg_locs is {}".format(seg_locs))
-                    print("images is {}".format(images))
-                    for image, seg_loc in zip(images, seg_locs):
-                        bbox = tf.py_func(seg_loc_to_bbox, [seg_loc], tf.float32)
-                        bbox.set_shape((seg_loc.get_shape()[0], 4))
-                        tf_summary_image(image, bbox, "predicted")
-                    '''
+
+                    
+                    def seg_mask_to_bbox(seg_neg_mask):
+                        anchors = config.default_anchors
+                        seg_neg_mask = [bool(i) for i in seg_neg_mask]
+                        selected_neg_anchors = anchors[seg_neg_mask, ...] # anchor (cx, cy, w, h)
+                        def _convert(coords):
+                            xmin = coords[0] - 0.5 * coords[2]
+                            xmax = coords[0] + 0.5 * coords[2]
+                            ymin = coords[1] - 0.5 * coords[3]
+                            ymax = coords[1] + 0.5 * coords[3]
+                            return [xmin, ymin, xmax, ymax]
+                        rst = np.asarray([_convert(anchor) for anchor in selected_neg_anchors])
+                        return rst
+
+
+                    def draw_anchor(image, seg_mask):
+                        from cv_utils import draw_rect
+                        anchors = seg_mask_to_bbox(seg_mask)
+                        rst_image = draw_rect(image, anchors) 
+                        return rst_image
+
                     
                     # build seglink loss
                     net.build_loss(seg_labels = b_seg_label, 
                                    seg_offsets = b_seg_loc, 
                                    link_labels = b_link_label,
                                    do_summary = do_summary)
-                    
-                    
+
+
+                    '''
+                    # draw the selected seg_neg_anchors and pos_anchors
+                    b_seg_neg_mask = net.collections.get("seg_selected_neg_mask")
+                    b_seg_pos_mask = net.collections.get("seg_pos_mask")
+                    idx = 0
+                    for image, seg_neg_mask, seg_pos_mask in zip(tf.unstack(b_image), tf.unstack(b_seg_neg_mask), tf.unstack(b_seg_pos_mask)):
+                        try:
+                            tmp = tf.py_func(draw_anchor, [image, seg_neg_mask], [tf.float32])
+                            tmp = tmp[0]
+                            tmp = tf.expand_dims(tmp, 0)
+                            tf.summary.image(str(idx) + '_anchors_neg', tmp)
+
+                            tmp = tf.py_func(draw_anchor, [image, seg_pos_mask], [tf.float32])
+                            tmp = tmp[0]
+                            tmp = tf.expand_dims(tmp, 0)
+                            tf.summary.image(str(idx) + '_anchors_pos', tmp)
+                            idx += 1
+                        except Exception as e:
+                            continue
+                    '''
+
                     # gather seglink losses
                     losses = tf.get_collection(tf.GraphKeys.LOSSES, clone_scope)
                     assert len(losses) ==  3  # 3 is the number of seglink losses: seg_cls, seg_loc, link_cls
@@ -311,10 +269,10 @@ def create_clones(batch_queue):
     train_ops = [update_op]
     
     # moving average
-    if FLAGS.using_moving_average:
+    if config.using_moving_average:
         tf.logging.info('using moving average in training, \
-        with decay = %f'%(FLAGS.moving_average_decay))
-        ema = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay)
+        with decay = %f'%(config.moving_average_decay))
+        ema = tf.train.ExponentialMovingAverage(config.moving_average_decay)
         ema_op = ema.apply(tf.trainable_variables())
         with tf.control_dependencies([update_op]):# ema after updating
             train_ops.append(tf.group(ema_op))
@@ -323,25 +281,24 @@ def create_clones(batch_queue):
     return train_op
 
     
-    
 def train(train_op):
     summary_op = tf.summary.merge_all()
     sess_config = tf.ConfigProto(log_device_placement = False, allow_soft_placement = True)
-    if FLAGS.gpu_memory_fraction < 0:
+    if config.gpu_memory_fraction < 0:
         sess_config.gpu_options.allow_growth = True
-    elif FLAGS.gpu_memory_fraction > 0:
-        sess_config.gpu_options.per_process_gpu_memory_fraction = FLAGS.gpu_memory_fraction;
+    elif config.gpu_memory_fraction > 0:
+        sess_config.gpu_options.per_process_gpu_memory_fraction = config.gpu_memory_fraction;
     
     init_fn = util.tf.get_init_fn(checkpoint_path = FLAGS.checkpoint_path, train_dir = FLAGS.train_dir, 
-                          ignore_missing_vars = FLAGS.ignore_missing_vars, checkpoint_exclude_scopes = FLAGS.checkpoint_exclude_scopes)
+                          ignore_missing_vars = config.ignore_missing_vars, checkpoint_exclude_scopes = config.checkpoint_exclude_scopes)
     saver = tf.train.Saver(max_to_keep = 500, write_version = 2)
     slim.learning.train(
             train_op,
             logdir = FLAGS.train_dir,
             init_fn = init_fn,
             summary_op = summary_op,
-            number_of_steps = FLAGS.max_number_of_steps,
-            log_every_n_steps = FLAGS.log_every_n_steps,
+            number_of_steps = config.max_number_of_steps,
+            log_every_n_steps = config.log_every_n_steps,
             save_summaries_secs = 60,
             saver = saver,
             save_interval_secs = 1200,

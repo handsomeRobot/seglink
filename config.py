@@ -7,8 +7,6 @@ slim = tf.contrib.slim
 import util
 
 global feat_shapes
-global image_shape
-
 
 global default_anchors
 global defalt_anchor_map
@@ -16,63 +14,71 @@ global default_anchor_center_set
 global num_anchors
 global num_links
 
-
-global batch_size
 global batch_size_per_gpu
 global gpus
 global num_clones
 global clone_scopes
 
-
-global train_with_ignored
-global seg_loc_loss_weight
-global conf_cls_loss_weight
-
-global seg_conf_threshold
-global link_conf_threshold
-
+# =========================================================================#
+# basic config values
+# =========================================================================#
 anchor_offset = 0.5    
 anchor_scale_gamma = 1.5
 feat_layers = ['conv4_3','fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2']
-# feat_norms = [20] + [-1] * len(feat_layers)
-max_height_ratio = 1.5
-# prior_scaling = [0.1, 0.2, 0.1, 0.2, 20.0]
-#prior_scaling = [0.2, 0.5, 0.2, 0.5, 20.0]
-prior_scaling = [1.0, 1.0, 1.0, 1.0, 0.5]
+max_height_ratio = 2
 
-max_neg_pos_ratio = 3
+# the weight applied to loss of cx, cy, w, h, theta
+prior_scaling = [0.1, 0.1, 0.1, 0.1, 20]
 
+max_neg_pos_ratio = 6
 data_format = 'NHWC'
 
-def _set_image_shape(shape):
-    global image_shape
-    image_shape = shape
+# height, width
+image_shape = (512, 512) 
 
-def _set_feat_shapes(shapes):
-    global feat_shapes
-    feat_shapes = shapes
+batch_size = 8
+weight_decay = 0.0005 
+num_gpus = 1 
 
-def _set_batch_size(bz):
-    global batch_size
-    batch_size = bz
+# if < 0: all_growth = True
+gpu_memory_fraction = -1 
 
-def _set_det_th(seg_conf_th, link_conf_th):
-    global seg_conf_threshold
-    global link_conf_threshold
+train_with_ignored = False
+seg_loc_loss_weight = 1.0
+link_cls_loss_weight = 1.0
+seg_conf_threshold = 0.5
+link_conf_threshold = 0.5
+
+# max number of train steps
+max_number_of_steps = 1000000 
+
+log_every_n_steps = 1 
+ignore_missing_vars = True
+checkpoint_exclude_scopes = None
+learning_rate = 0.001
+
+# the momentum for the MomentumOptimizer
+momentum = 0.9 
+
+using_moving_average = False
+moving_average_decay = 0.9999
+model_name = 'seglink_vgg'
+
+# the number of parallel readers read data from dataset
+num_readers = 1 
+
+# the num of threads used to create the batches
+num_preprocessing_threads = 1 
+
+# update the basic config values
+from flags import FLAGS
+if FLAGS.config_file:
+    exec(open(FLAGS.config_file).read())
+
     
-    seg_conf_threshold = seg_conf_th
-    link_conf_threshold = link_conf_th
-    
-def  _set_loss_weight(seg_loc_loss_w, link_cls_loss_w):
-    global seg_loc_loss_weight
-    global link_cls_loss_weight
-    seg_loc_loss_weight = seg_loc_loss_w
-    link_cls_loss_weight = link_cls_loss_w
-    
-def  _set_train_with_ignored(train_with_ignored_):
-    global train_with_ignored    
-    train_with_ignored = train_with_ignored_
-
+# ==============================================================================#
+# Helper functions
+# ==============================================================================#
 def _build_anchor_map():
     global default_anchor_map
     global default_anchor_center_set
@@ -81,61 +87,51 @@ def _build_anchor_map():
     for anchor_idx, anchor in enumerate(default_anchors):
         default_anchor_map[(int(anchor[1]), int(anchor[0]))].append(anchor_idx)
     default_anchor_center_set = set(default_anchor_map.keys())
+
     
-def init_config(image_shape, batch_size = 1, 
-                weight_decay = 0.0005, 
-                num_gpus = 1, 
-                train_with_ignored = False,
-                seg_loc_loss_weight = 1.0,
-                link_cls_loss_weight = 1.0,
-                seg_conf_threshold = 0.5,
-                link_conf_threshold = 0.5):
+def init_config():
+    '''
+    Calculate advanced config values based on basic config values
+    '''
 
-    _set_det_th(seg_conf_threshold, link_conf_threshold)
-    _set_loss_weight(seg_loc_loss_weight, link_cls_loss_weight)
-    _set_train_with_ignored(train_with_ignored)
+    global feat_shapes
+    global default_anchors
+    global num_anchors
+    global num_links
+    global gpus
+    global num_clones
+    global clone_scopes
+    global batch_size_per_gpu
 
-    h, w = image_shape
+    # calculate the advanced config values
     from nets import anchor_layer
     from nets import seglink_symbol
+    h, w = image_shape
     fake_image = tf.ones((1, h, w, 3))
     fake_net = seglink_symbol.SegLinkNet(inputs = fake_image, weight_decay = weight_decay)
     feat_shapes = fake_net.get_shapes();
     
-    # the placement of the following lines are extremely important
-    _set_image_shape(image_shape)
-    _set_feat_shapes(feat_shapes)
-
-    anchors, _ = anchor_layer.generate_anchors()
-    global default_anchors
-    default_anchors = anchors
+    default_anchors, _ = anchor_layer.generate_anchors()
    
-    global num_anchors
-    num_anchors = len(anchors)
+    num_anchors = len(default_anchors)
     
     _build_anchor_map()
     
-    global num_links
     num_links = num_anchors * 8 + (num_anchors - np.prod(feat_shapes[feat_layers[0]])) * 4
     
-    #init batch size
-    global gpus
     gpus = util.tf.get_available_gpus(num_gpus)
     
-    global num_clones
     num_clones = len(gpus)
     
-    global clone_scopes
     clone_scopes = ['clone_%d'%(idx) for idx in range(num_clones)]
     
-    _set_batch_size(batch_size)
-    
-    global batch_size_per_gpu
     batch_size_per_gpu = batch_size / num_clones
+
     if batch_size_per_gpu < 1:
         raise ValueError('Invalid batch_size [=%d], resulting in 0 images per gpu.'%(batch_size))
     
     return default_anchors
+
     
 def print_config(flags, dataset, save_dir = None, print_to_file = True):
     def do_print(stream=None):
@@ -173,3 +169,4 @@ def print_config(flags, dataset, save_dir = None, print_to_file = True):
             do_print(out)
 
     return default_anchors 
+

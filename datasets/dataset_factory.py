@@ -43,12 +43,24 @@ kuaidi_cut = DatasetConfig(
     }
 )
 
+
+table_extract = DatasetConfig(
+    file_pattern = 'table_extract_test_*.tfrecord',
+    split_sizes = {
+        'train': 422,
+        'test': 47 
+    }
+)
+
+
+
 datasets_map = {
     'icdar2013':icdar2013,
     'icdar2015':icdar2015,
     'scut':scut,
     'synthtext':synthtext,
-    'kuaidi_cut':kuaidi_cut
+    'kuaidi_cut':kuaidi_cut,
+    'table_extract': table_extract
 }
 
 

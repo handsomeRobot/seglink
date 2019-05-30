@@ -2,6 +2,7 @@ import cv2
 import math
 import numpy as np
 import tensorflow as tf
+from scipy.optimize import curve_fit
 
 import config
 import util
@@ -236,7 +237,9 @@ def match_anchor_to_text_boxes(anchors, xs, ys):
     import time
     start_time = time.time()
     # match anchor to bbox
+    # match anchor to bbox
     for anchor_idx in range(num_anchors):
+        candidates = []
         anchor = anchors[anchor_idx, :]
         acx, acy, aw, ah = anchor
         center_point_matched = False
@@ -251,13 +254,21 @@ def match_anchor_to_text_boxes(anchors, xs, ys):
             rect = rects[bbox_idx, :]
             height_ratio = anchor_rect_height_ratio(anchor, rect)
             height_matched = height_ratio <= config.max_height_ratio
+            if height_ratio < 1:
+                height_ratio = 1 / height_ratio
             if height_matched and center_point_matched:
-                # an anchor can only be matched to at most one bbox
-                seg_labels[anchor_idx] = bbox_idx
-                seg_locations[anchor_idx, :] = cal_seg_loc_for_single_anchor(anchor, rect)
+                candidates.append((height_ratio, bbox_idx))
+        if len(candidates) == 0:
+            continue
+        else:
+            # sort the bbox, select the one with closet size
+            # an anchor can only be matched to at most one bbox
+            candidates = sorted(candidates, key=lambda x: x[0])
+            bbox_idx = candidates[0][1]
+            seg_labels[anchor_idx] = bbox_idx
+            rect = rects[bbox_idx, :]
+            seg_locations[anchor_idx, :] = cal_seg_loc_for_single_anchor(anchor, rect)
 
-    #print("xk: seg_locations is {}".format(seg_locations))            
-        
     end_time = time.time()
     tf.logging.info('Time in For Loop: %f'%(end_time - start_time))
     return seg_labels, seg_locations, rects
@@ -297,7 +308,7 @@ def match_anchor_to_text_boxes_fast(anchors, xs, ys):
     # construct a bbox point map: keys are the poistion of all points in bbox contours, and 
     #    value being the bbox index
     bbox_mask = np.ones(config.image_shape, dtype = np.int32) * (-1)
-    bbox_mask_2 = np.ones(config.image_shape, dtype = np.int32)
+    bbox_mask_2 = np.ones(config.image_shape, dtype = np.int32) * 50
     for bbox_idx in range(num_bboxes):
         bbox_points = zip(xs[bbox_idx, :], ys[bbox_idx, :])
         bbox_cnts = util.img.points_to_contours(bbox_points)
@@ -619,13 +630,11 @@ def group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold)
         return [result[root] for root in result]
 
         
-    seg_indexes = np.arange(len(seg_scores))
-    print(">>>>> seg_scores is {} {}".format(seg_scores.shape, seg_scores))
-    print(">>>>> seg_indexes is {} {}".format(seg_indexes.shape, seg_indexes))
-    layer_seg_indexes = reshape_labels_by_layer(seg_indexes)
-    print(">>>>> layer_seg_indexes is {} {}".format(len(layer_seg_indexes), layer_seg_indexes))
+    seg_indexes = np.arange(len(seg_scores)) 
+    layer_seg_indexes = reshape_labels_by_layer(seg_indexes) # dict, feat_layer as key, each value shape [w, h]
 
     layer_inter_link_scores, layer_cross_link_scores = reshape_link_gt_by_layer(link_scores)
+    # each of the two is dict, feat_layer as key, inter_layer value shape (w, h, 8), the other (w, h, 4)
     
     for layer_index, layer_name in enumerate(config.feat_layers):
         layer_shape = config.feat_shapes[layer_name]
@@ -719,15 +728,17 @@ def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred,
     
     bboxes = []
     ref_h, ref_w = config.image_shape
+    image_h, image_w = image_shape[:2]
     for group in seg_groups:
         group = [seg_locs[idx, :] for idx in group]
         bbox = combine_segs(group)
         #print(">>>>> bbox is {}".format(bbox))
-        #bbox = list(bbox)
-        #bbox[4] = (image_h / ref_h) / (image_w / ref_w) * math.tan(bbox[4] * math.pi / 180)
-        #bbox[4] = math.atan(bbox[4]) * 180 / math.pi
-        #bbox = np.asarray(bbox) * scale
-        bboxes.append(np.asarray(bbox))
+        bbox = list(bbox)
+        scale = [image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, 1]
+        bbox[4] = (scale[1] / scale[0]) * np.tan(bbox[4] * np.pi / 180)
+        bbox[4] = np.arctan(bbox[4]) * 180 / math.pi
+        bbox = np.asarray(bbox) * scale
+        bboxes.append(bbox)
         
     bboxes = bboxes_to_xys(bboxes, image_shape)
     return np.asarray(bboxes, dtype = np.float32)
@@ -738,6 +749,8 @@ def cos(theta):
     return np.cos(theta / 180.0 *  np.pi)
 def tan(theta):
     return np.tan(theta / 180.0 * np.pi)
+def arctan(k):
+    return np.arctan(k) * 180.0 / np.pi
     
 def combine_segs(segs, return_bias = False):
     segs = np.asarray(segs)
@@ -752,8 +765,8 @@ def combine_segs(segs, return_bias = False):
     cys = segs[:, 1]
 
     ## the slope
-    bar_theta = np.mean(segs[:, 4])# average theta
-    k = tan(bar_theta);
+    #bar_theta = np.mean(segs[:, 4])# average theta
+    #k = tan(bar_theta);
     # get the slope by averaging the theta between neighbour center points
     '''
     center_points = segs[:, :2]
@@ -776,7 +789,10 @@ def combine_segs(segs, return_bias = False):
     ###                           = sum(c_i^2 + b^2 + 2 * c_i * b)
     ###                           = n * b^2 + 2* sum(c_i) * b + sum(c_i^2)
     ### the target b = - sum(c_i) / n = - mean(c_i) = mean(y_i - k * x_i)
-    b = np.mean(cys - k * cxs)
+    #b = np.mean(cys - k * cxs)
+
+    k, b = curve_fit(lambda x, k, b: k * x + b, cxs, cys)[0]
+    bar_theta = arctan(k) 
     
     # find the projections of all centers on the straight line
     ## firstly, move both the line and centers upward by distance b, so as to make the straight line crossing the point(0, 0): y = kx
@@ -844,10 +860,10 @@ def bboxes_to_xys(bboxes, image_shape):
     for bbox_idx, bbox in enumerate(bboxes):
         bbox = ((bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox[4])
         points = cv2.boxPoints(bbox)
-        #points = np.int0(points)
+        points = np.int0(points)
         for i_xy, (x, y) in enumerate(points):
-            x = int(w_scale * x)
-            y = int(h_scale * y)
+            #x = int(w_scale * x)
+            #y = int(h_scale * y)
             x = get_valid_x(x)
             y = get_valid_y(y)
             points[i_xy, :] = [x, y]

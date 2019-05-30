@@ -57,7 +57,7 @@ def image_to_tfexample(image_data, image_format, height, width, class_id):
     }))
 
 
-def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxes, oriented_bboxes, shape):
+def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxes, oriented_bboxes, shape, vertex_num):
     """Build an Example proto for an image example.
     Args:
       image_data: string, JPEG encoding of RGB image;
@@ -72,7 +72,28 @@ def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxe
     
     image_format = b'JPEG'
     oriented_bboxes = np.asarray(oriented_bboxes)
+    print("oriented_bboxes {} {}".format(oriented_bboxes.shape, type(oriented_bboxes)))
     bboxes = np.asarray(bboxes)
+    feature = {
+            'image/shape': int64_feature(list(shape)),
+            'image/object/bbox/xmin': float_feature(list(bboxes[:, 0])),
+            'image/object/bbox/ymin': float_feature(list(bboxes[:, 1])),
+            'image/object/bbox/xmax': float_feature(list(bboxes[:, 2])),
+            'image/object/bbox/ymax': float_feature(list(bboxes[:, 3])),
+            'image/object/bbox/label': int64_feature(labels),
+            'image/object/bbox/label_text': bytes_feature(labels_text),
+            'image/object/bbox/ignored': int64_feature(ignored),
+            'image/format': bytes_feature(image_format),
+            'image/filename': bytes_feature(filename),
+            'image/encoded': bytes_feature(image_data)
+            }
+    for i in range(vertex_num):
+        feature['image/object/bbox/x{}'.format(i + 1)] = float_feature(list(oriented_bboxes[:, 2 * i]))
+        feature['image/object/bbox/y{}'.format(i + 1)] = float_feature(list(oriented_bboxes[:, 2 * i + 1]))
+        feature['image/object/bbox/z{}'.format(i + 1)] = float_feature([1] * len(oriented_bboxes))
+    example = tf.train.Example(features=tf.train.Features(feature=feature))
+
+    '''
     example = tf.train.Example(features=tf.train.Features(feature={
             'image/shape': int64_feature(list(shape)),
             'image/object/bbox/xmin': float_feature(list(bboxes[:, 0])),
@@ -97,6 +118,7 @@ def convert_to_example(image_data, filename, labels, ignored, labels_text, bboxe
             'image/format': bytes_feature(image_format),
             'image/filename': bytes_feature(filename),
             'image/encoded': bytes_feature(image_data)}))
+    '''
     return example
 
 

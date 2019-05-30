@@ -100,3 +100,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# weights and graphs
+weights
+inference_graphs
+
+# output pics
+output_*

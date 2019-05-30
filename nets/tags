@@ -1,0 +1,37 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+OHNM_batch	seglink_symbol.py	/^        def OHNM_batch(neg_conf, pos_mask, neg_mask):$/;"	f	function:SegLinkNet.build_loss
+OHNM_single_image	seglink_symbol.py	/^        def OHNM_single_image(scores, n_pos, neg_mask):$/;"	f	function:SegLinkNet.build_loss
+SegLinkNet	seglink_symbol.py	/^class SegLinkNet(object):$/;"	c
+__init__	seglink_symbol.py	/^    def __init__(self, inputs, weight_decay = None, basenet_type = 'vgg', data_format = 'NHWC',  $/;"	m	class:SegLinkNet
+_add_extra_layers	seglink_symbol.py	/^    def _add_extra_layers(self, inputs, end_points):$/;"	m	class:SegLinkNet
+_add_seglink_layers	seglink_symbol.py	/^    def _add_seglink_layers(self):$/;"	m	class:SegLinkNet
+_build_network	seglink_symbol.py	/^    def _build_network(self):$/;"	m	class:SegLinkNet
+_build_seg_link_layer	seglink_symbol.py	/^    def _build_seg_link_layer(self, layer_name):$/;"	m	class:SegLinkNet
+_generate_anchors_one_layer	anchor_layer.py	/^def _generate_anchors_one_layer(h_I, w_I, h_l, w_l):$/;"	f
+_get_scale	anchor_layer.py	/^def _get_scale(w_I, w_l):$/;"	f
+_reshape_and_concat	anchor_layer.py	/^def _reshape_and_concat(tensors):$/;"	f
+_test_generate_anchors_one_layer	anchor_layer.py	/^def _test_generate_anchors_one_layer():$/;"	f
+basenet	vgg.py	/^def basenet(inputs):$/;"	f
+build_loss	seglink_symbol.py	/^    def build_loss(self, seg_labels, seg_offsets, link_labels, do_summary = True):$/;"	m	class:SegLinkNet
+generate_anchors	anchor_layer.py	/^def generate_anchors():$/;"	f
+get_basenet	net_factory.py	/^def get_basenet(name, inputs):$/;"	f
+get_pos_and_neg_masks	seglink_symbol.py	/^        def get_pos_and_neg_masks(labels):$/;"	f	function:SegLinkNet.build_loss
+get_shape	seglink_symbol.py	/^    def get_shape(self, name):$/;"	m	class:SegLinkNet
+get_shapes	seglink_symbol.py	/^    def get_shapes(self):$/;"	m	class:SegLinkNet
+has_pos	seglink_symbol.py	/^            def has_pos():$/;"	f	function:SegLinkNet.build_loss.OHNM_batch
+has_pos	seglink_symbol.py	/^            def has_pos():$/;"	f	function:SegLinkNet.build_loss.OHNM_single_image
+has_pos	seglink_symbol.py	/^            def has_pos():$/;"	f	function:SegLinkNet.build_loss.smooth_l1_loss
+net_dict	net_factory.py	/^net_dict = {$/;"	v
+no_pos	seglink_symbol.py	/^            def no_pos():$/;"	f	function:SegLinkNet.build_loss.OHNM_batch
+no_pos	seglink_symbol.py	/^            def no_pos():$/;"	f	function:SegLinkNet.build_loss.OHNM_single_image
+no_pos	seglink_symbol.py	/^            def no_pos():$/;"	f	function:SegLinkNet.build_loss.smooth_l1_loss
+reshape	seglink_symbol.py	/^    def reshape(t):$/;"	f	function:reshape_and_concat
+reshape_and_concat	seglink_symbol.py	/^def reshape_and_concat(tensors):$/;"	f
+slim	vgg.py	/^slim = tf.contrib.slim$/;"	v
+smooth_l1_loss	seglink_symbol.py	/^        def smooth_l1_loss(pred, target, weights):$/;"	f	function:SegLinkNet.build_loss
+tensor_shape	seglink_symbol.py	/^def tensor_shape(t):$/;"	f

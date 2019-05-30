@@ -1,0 +1,57 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+_create_local	metrics.py	/^def _create_local(name, shape, collections=None, validate_shape=True,$/;"	f
+anchor_rect_height_ratio	seglink.py	/^def anchor_rect_height_ratio(anchor, rect):$/;"	f
+arctan	seglink.py	/^def arctan(k):$/;"	f
+bboxes_filter_overlap	bboxes.py	/^def bboxes_filter_overlap(labels, bboxes,xs, ys, threshold, scope=None, assign_negative = False):$/;"	f
+bboxes_intersection	bboxes.py	/^def bboxes_intersection(bbox_ref, bboxes, name=None):$/;"	f
+bboxes_jaccard	bboxes.py	/^def bboxes_jaccard(bbox, gxs, gys):$/;"	f
+bboxes_matching	bboxes.py	/^def bboxes_matching(bboxes, gxs, gys, gignored, matching_threshold = 0.5, scope=None):$/;"	f
+bboxes_resize	bboxes.py	/^def bboxes_resize(bbox_ref, bboxes, xs, ys, name=None):$/;"	f
+bboxes_to_xys	seglink.py	/^def bboxes_to_xys(bboxes, image_shape):$/;"	f
+cal_link_labels	seglink.py	/^def cal_link_labels(labels):$/;"	f
+cal_seg_loc_for_single_anchor	seglink.py	/^def cal_seg_loc_for_single_anchor(anchor, rect):$/;"	f
+combine_segs	seglink.py	/^def combine_segs(segs, return_bias = False):$/;"	f
+cos	seglink.py	/^def cos(theta):$/;"	f
+crop_horizontal_bbox_using_anchor	seglink.py	/^def crop_horizontal_bbox_using_anchor(bbox, anchor):$/;"	f
+decode_seg_offsets_pred	seglink.py	/^def decode_seg_offsets_pred(seg_offsets_pred):$/;"	f
+encode_seg_offsets	seglink.py	/^def encode_seg_offsets(seg_locs):$/;"	f
+fmean	metrics.py	/^def fmean(pre, rec):$/;"	f
+get_all_seglink_gt	seglink.py	/^def get_all_seglink_gt(xs, ys, ignored, image):$/;"	f
+get_cross_layer_neighbours	seglink.py	/^def get_cross_layer_neighbours(x, y):$/;"	f
+get_inter_layer_neighbours	seglink.py	/^def get_inter_layer_neighbours(x, y):$/;"	f
+get_root	seglink.py	/^    def get_root(idx):$/;"	f	function:group_segs
+get_valid_x	seglink.py	/^    def get_valid_x(x):$/;"	f	function:bboxes_to_xys
+get_valid_y	seglink.py	/^    def get_valid_y(y):$/;"	f	function:bboxes_to_xys
+group_segs	seglink.py	/^def group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold):$/;"	f
+is_anchor_center_in_rect	seglink.py	/^def is_anchor_center_in_rect(anchor, xs, ys, bbox_idx):$/;"	f
+is_valid_cord	seglink.py	/^def is_valid_cord(x, y, w, h):$/;"	f
+m_body	bboxes.py	/^        def m_body(i, ta_tp, ta_fp, gmatch, n_ignored_det):$/;"	f	function:bboxes_matching
+m_condition	bboxes.py	/^        def m_condition(i, ta_tp, ta_fp, gmatch, n_ignored_det):$/;"	f	function:bboxes_matching
+match_anchor_to_text_boxes	seglink.py	/^def match_anchor_to_text_boxes(anchors, xs, ys):$/;"	f
+match_anchor_to_text_boxes_fast	seglink.py	/^def match_anchor_to_text_boxes_fast(anchors, xs, ys):$/;"	f
+min_area_rect	seglink.py	/^def min_area_rect(xs, ys):$/;"	f
+np_bboxes_jaccard	bboxes.py	/^def np_bboxes_jaccard(bbox, gxs, gys):$/;"	f
+precision_recall	metrics.py	/^def precision_recall(num_gbboxes, tp, fp, scope=None):$/;"	f
+reshape_labels_by_layer	seglink.py	/^def reshape_labels_by_layer(labels):$/;"	f
+reshape_link_gt_by_layer	seglink.py	/^def reshape_link_gt_by_layer(link_gt):$/;"	f
+rotate_horizontal_bbox_to_oriented	seglink.py	/^def rotate_horizontal_bbox_to_oriented(center, bbox):$/;"	f
+rotate_oriented_bbox_to_horizontal	seglink.py	/^def rotate_oriented_bbox_to_horizontal(center, bbox):$/;"	f
+safe_divide	math.py	/^def safe_divide(numerator, denominator, name):$/;"	f
+seglink_to_bbox	seglink.py	/^def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred, $/;"	f
+set_ignored_labels	seglink.py	/^    def set_ignored_labels(labels, idx):$/;"	f	function:get_all_seglink_gt
+set_ignored_labels_to_zero	seglink.py	/^    def set_ignored_labels_to_zero(labels):$/;"	f	function:get_all_seglink_gt
+set_positive_labels_to_one	seglink.py	/^    def set_positive_labels_to_one(labels):$/;"	f	function:get_all_seglink_gt
+sin	seglink.py	/^def sin(theta):$/;"	f
+streaming_tp_fp_arrays	metrics.py	/^def streaming_tp_fp_arrays(num_gbboxes, tp, fp, $/;"	f
+tan	seglink.py	/^def tan(theta):$/;"	f
+tf_get_all_seglink_gt	seglink.py	/^def tf_get_all_seglink_gt(xs, ys, ignored, image):$/;"	f
+tf_min_area_rect	seglink.py	/^def tf_min_area_rect(xs, ys):$/;"	f
+tf_seglink_to_bbox	seglink.py	/^def tf_seglink_to_bbox(seg_cls_pred, link_cls_pred, seg_offsets_pred, image_shape, $/;"	f
+to_list	seglink.py	/^    def to_list():$/;"	f	function:group_segs
+transform_cv_rect	seglink.py	/^def transform_cv_rect(rects):$/;"	f
+union	seglink.py	/^    def union(idx1, idx2):$/;"	f	function:group_segs

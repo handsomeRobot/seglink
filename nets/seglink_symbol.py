@@ -21,6 +21,7 @@ class SegLinkNet(object):
         
         self._build_network();
         self.shapes = self.get_shapes();
+        self.collections = {}
 
     def get_shapes(self):
         shapes = {}
@@ -124,16 +125,16 @@ class SegLinkNet(object):
         for layer_name in self.feat_layers:
             with tf.variable_scope(layer_name):
                 seg_scores, seg_offsets, within_layer_link_scores, cross_layer_link_scores = self._build_seg_link_layer(layer_name)
-            all_seg_scores.append(seg_scores)
-            all_seg_offsets.append(seg_offsets)
-            all_within_layer_link_scores.append(within_layer_link_scores)
-            all_cross_layer_link_scores.append(cross_layer_link_scores)
+            all_seg_scores.append(seg_scores) # all_seg_scores: (6, batch_size, w, h, 2)
+            all_seg_offsets.append(seg_offsets) # all_seg_offsets: (6, batch_size, w, h, 5)
+            all_within_layer_link_scores.append(within_layer_link_scores) # (6, batch_size, w, h, 8, 2)
+            all_cross_layer_link_scores.append(cross_layer_link_scores) # (6, batch_size, w, h, 4, 2)
             
-        self.seg_score_logits = reshape_and_concat(all_seg_scores) # (batch_size, N, 2)
-        self.seg_scores = slim.softmax(self.seg_score_logits) # (batch_size, N, 2)
-        self.seg_offsets = reshape_and_concat(all_seg_offsets) # (batch_size, N, 5)
-        self.cross_layer_link_scores = reshape_and_concat(all_cross_layer_link_scores)  # (batch_size, 8N, 2)
-        self.within_layer_link_scores = reshape_and_concat(all_within_layer_link_scores)  # (batch_size, 4(N - N_conv4_3), 2)
+        self.seg_score_logits = reshape_and_concat(all_seg_scores) # (batch_size, num_anchors, 2)
+        self.seg_scores = slim.softmax(self.seg_score_logits) # (batch_size, num_anchors, 2)
+        self.seg_offsets = reshape_and_concat(all_seg_offsets) # (batch_size, num_anchors, 5)
+        self.cross_layer_link_scores = reshape_and_concat(all_cross_layer_link_scores)  # (batch_size, 8*num_anchors, 2)
+        self.within_layer_link_scores = reshape_and_concat(all_within_layer_link_scores)  # (batch_size, 4*(num_anchors - conv4_2), 2)
         self.link_score_logits = tf.concat([self.within_layer_link_scores, self.cross_layer_link_scores], axis = 1)
         self.link_scores = slim.softmax(self.link_score_logits)
         
@@ -185,28 +186,30 @@ class SegLinkNet(object):
         def OHNM_batch(neg_conf, pos_mask, neg_mask):
             selected_neg_mask = []
             for image_idx in range(int(batch_size)):
-                image_neg_conf = neg_conf[image_idx, :]
-                image_neg_mask = neg_mask[image_idx, :]
-                image_pos_mask = pos_mask[image_idx, :]
+                image_neg_conf = neg_conf[image_idx, :] # shape (N) 
+                image_neg_mask = neg_mask[image_idx, :] # shape (num_anchors)
+                image_pos_mask = pos_mask[image_idx, :] # shape (num_anchors)
                 n_pos = tf.reduce_sum(tf.cast(image_pos_mask, tf.int32))
                 selected_neg_mask.append(OHNM_single_image(image_neg_conf, n_pos, image_neg_mask))
                 
             selected_neg_mask = tf.stack(selected_neg_mask)
             selected_mask = tf.cast(pos_mask, tf.float32) + selected_neg_mask
-            return selected_mask
+            return selected_mask, selected_neg_mask
                 
 
         # OHNM on segments
-        seg_neg_scores = self.seg_scores[:, :, 0]
-        seg_pos_mask, seg_neg_mask = get_pos_and_neg_masks(seg_labels)
-        seg_selected_mask = OHNM_batch(seg_neg_scores, seg_pos_mask, seg_neg_mask)
+        seg_neg_scores = self.seg_scores[:, :, 0] #seg_neg_scores: (batch_size, N)
+        seg_pos_mask, seg_neg_mask = get_pos_and_neg_masks(seg_labels) # seg_labels: (batch_size, num_anchors)
+        seg_selected_mask, seg_selected_neg_mask = OHNM_batch(seg_neg_scores, seg_pos_mask, seg_neg_mask)
+        self.collections['seg_selected_neg_mask'] = seg_selected_neg_mask
+        self.collections['seg_pos_mask'] = seg_pos_mask
         n_seg_pos = tf.reduce_sum(tf.cast(seg_pos_mask, tf.float32))
 
         with tf.name_scope('seg_cls_loss'):            
             def has_pos():
                 seg_cls_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits = self.seg_score_logits, 
-                    labels = tf.cast(seg_pos_mask, dtype = tf.int32))
+                    logits = self.seg_score_logits, # shape (batch_size, num_anchors, 2)
+                    labels = tf.cast(seg_pos_mask, dtype = tf.int32)) # shape (batch_size, num_anchors)
                 return tf.reduce_sum(seg_cls_loss * seg_selected_mask) / n_seg_pos
             def no_pos():
                 return tf.constant(.0);
@@ -247,7 +250,8 @@ class SegLinkNet(object):
         
         link_neg_scores = self.link_scores[:,:,0]
         link_pos_mask, link_neg_mask = get_pos_and_neg_masks(link_labels)
-        link_selected_mask = OHNM_batch(link_neg_scores, link_pos_mask, link_neg_mask)
+        link_selected_mask, link_selected_neg_mask = OHNM_batch(link_neg_scores, link_pos_mask, link_neg_mask)
+        self.collections['link_selected_neg_mask'] = link_selected_neg_mask
         n_link_pos = tf.reduce_sum(tf.cast(link_pos_mask, dtype = tf.float32))
         with tf.name_scope('link_cls_loss'):
             def has_pos():
@@ -269,18 +273,18 @@ class SegLinkNet(object):
 def reshape_and_concat(tensors):
     def reshape(t):
         shape = tensor_shape(t)
-        if len(shape) == 4:
-            shape = (shape[0], -1, shape[-1])
+        if len(shape) == 4: # seg_score, (batch_size, w, h, 2)
+            shape = (shape[0], -1, shape[-1]) # shape (batch_size, N, 2)
             t = tf.reshape(t, shape)
-        elif len(shape) == 5:
-            shape = (shape[0], -1, shape[-2], shape[-1])
+        elif len(shape) == 5: # links, (batch_size, w, h, 8, 2)
+            shape = (shape[0], -1, shape[-2], shape[-1]) # shape (batch_size, N, 8, 2)
             t = tf.reshape(t, shape)
-            t = tf.reshape(t, [shape[0], -1, shape[-1]])
+            t = tf.reshape(t, [shape[0], -1, shape[-1]]) # shape (batch_size, 8*N, 2)
         else:
             raise ValueError("invalid tensor shape: %s, shape = %s"%(t.name, shape)) 
         return t;
     reshaped_tensors = [reshape(t) for t in tensors if t is not None]
-    return tf.concat(reshaped_tensors, axis = 1)
+    return tf.concat(reshaped_tensors, axis = 1) # shape (batch_size, num_anchors, 2 or 5)
     
 def tensor_shape(t):
     t.get_shape().assert_is_fully_defined()

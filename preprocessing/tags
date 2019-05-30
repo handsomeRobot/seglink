@@ -1,0 +1,45 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AREA_RANGE	ssd_vgg_preprocessing.py	/^AREA_RANGE = [0.1, 1]$/;"	v
+BBOX_CROP_OVERLAP	ssd_vgg_preprocessing.py	/^BBOX_CROP_OVERLAP = 0.1         # Minimum overlap to keep a bbox after cropping.$/;"	v
+CROP_ASPECT_RATIO_RANGE	ssd_vgg_preprocessing.py	/^CROP_ASPECT_RATIO_RANGE = (0.5, 2.)  # Distortion ratio during cropping.$/;"	v
+EVAL_SIZE	ssd_vgg_preprocessing.py	/^EVAL_SIZE = (300, 300)$/;"	v
+FLIP	ssd_vgg_preprocessing.py	/^FLIP = True$/;"	v
+MIN_OBJECT_COVERED	ssd_vgg_preprocessing.py	/^MIN_OBJECT_COVERED = 0.5$/;"	v
+Resize	ssd_vgg_preprocessing.py	/^Resize = IntEnum('Resize', ('NONE',                # Nothing!$/;"	v
+_B_MEAN	ssd_vgg_preprocessing.py	/^_B_MEAN = 104.$/;"	v
+_Check3DImage	tf_image.py	/^def _Check3DImage(image, require_static=True):$/;"	f
+_G_MEAN	ssd_vgg_preprocessing.py	/^_G_MEAN = 117.$/;"	v
+_ImageDimensions	tf_image.py	/^def _ImageDimensions(image):$/;"	f
+_R_MEAN	ssd_vgg_preprocessing.py	/^_R_MEAN = 123.$/;"	v
+_assert	tf_image.py	/^def _assert(cond, ex_type, msg):$/;"	f
+_is_tensor	tf_image.py	/^def _is_tensor(x):$/;"	f
+apply_with_random_selector	ssd_vgg_preprocessing.py	/^def apply_with_random_selector(x, func, num_cases):$/;"	f
+bboxes_crop_or_pad	tf_image.py	/^def bboxes_crop_or_pad(bboxes,$/;"	f
+distort_color	ssd_vgg_preprocessing.py	/^def distort_color(image, color_ordering=0, fast_mode=True, scope=None):$/;"	f
+distorted_bounding_box_crop	ssd_vgg_preprocessing.py	/^def distorted_bounding_box_crop(image,$/;"	f
+equal_	tf_image.py	/^        def equal_(x, y):$/;"	f	function:resize_image_bboxes_with_crop_or_pad
+fix_image_flip_shape	tf_image.py	/^def fix_image_flip_shape(image, result):$/;"	f
+flip_bboxes	tf_image.py	/^    def flip_bboxes(bboxes):$/;"	f	function:random_flip_left_right
+get_preprocessing	preprocessing_factory.py	/^def get_preprocessing(is_training=False):$/;"	f
+max_	tf_image.py	/^        def max_(x, y):$/;"	f	function:resize_image_bboxes_with_crop_or_pad
+min_	tf_image.py	/^        def min_(x, y):$/;"	f	function:resize_image_bboxes_with_crop_or_pad
+np_image_unwhitened	ssd_vgg_preprocessing.py	/^def np_image_unwhitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN], to_int=True):$/;"	f
+preprocess_for_eval	ssd_vgg_preprocessing.py	/^def preprocess_for_eval(image, labels, bboxes, xs, ys,$/;"	f
+preprocess_for_train	ssd_vgg_preprocessing.py	/^def preprocess_for_train(image, labels, bboxes, xs, ys,$/;"	f
+preprocess_image	ssd_vgg_preprocessing.py	/^def preprocess_image(image,$/;"	f
+preprocessing_fn	preprocessing_factory.py	/^    def preprocessing_fn(image, labels, bboxes, xs, ys, $/;"	f	function:get_preprocessing
+random_flip_left_right	tf_image.py	/^def random_flip_left_right(image, bboxes, seed=None):$/;"	f
+resize_image	tf_image.py	/^def resize_image(image, size,$/;"	f
+resize_image_bboxes_with_crop_or_pad	tf_image.py	/^def resize_image_bboxes_with_crop_or_pad(image, bboxes,$/;"	f
+rotate_image	ssd_vgg_preprocessing.py	/^def rotate_image(mat, angle):$/;"	f
+rotate_image_with_bounding_box	ssd_vgg_preprocessing.py	/^def rotate_image_with_bounding_box(image, bbox_lst, xs, ys):$/;"	f
+slim	preprocessing_factory.py	/^slim = tf.contrib.slim$/;"	v
+slim	ssd_vgg_preprocessing.py	/^slim = tf.contrib.slim$/;"	v
+tf_image_unwhitened	ssd_vgg_preprocessing.py	/^def tf_image_unwhitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN], to_int=True):$/;"	f
+tf_image_whitened	ssd_vgg_preprocessing.py	/^def tf_image_whitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN]):$/;"	f
+tf_summary_image	ssd_vgg_preprocessing.py	/^def tf_summary_image(image, bboxes, name='image', unwhitened=False):$/;"	f
