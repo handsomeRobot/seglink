@@ -1,0 +1,86 @@
+#encoding = utf-8
+"""Read test images, and store the detection result as txt files and zip file. 
+    The zip file follows the rule of ICDAR2015 Challenge4 Task1
+"""
+import os
+import numpy as np
+import math
+import tensorflow as tf # test
+from tensorflow.python.ops import control_flow_ops
+from tensorflow.contrib.training.python.training import evaluation
+from datasets import dataset_factory
+from preprocessing import ssd_vgg_preprocessing
+from tf_extended import seglink, metrics
+import util
+import cv2
+from nets import seglink_symbol, anchor_layer
+
+slim = tf.contrib.slim
+from flags import FLAGS
+import config
+
+
+def set_gpu_device(gpu_device):
+    if gpu_device:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
+    print("CUDA_VISIBLE_DEVICE is {}".format(os.environ["CUDA_VISIBLE_DEVICES"]))
+
+
+def load_model(weight_pb_file):
+    config.init_config()
+    set_gpu_device(config.gpu_device)
+    graph = tf.Graph()
+    with graph.as_default():
+        tf_config = tf.ConfigProto()
+        tf_config.allow_soft_placement = config.allow_soft_placement
+        if config.gpu_memory_fraction > 0:
+            tf_config.gpu_options.per_process_gpu_memory_fraction = config.gpu_memory_fraction
+        elif config.gpu_memory_fraction < 0:
+            tf_config.gpu_options.allow_growth = True
+        old_graph_def = tf.GraphDef()
+        with tf.gfile.GFile(weight_pb_file, 'rb') as fid:
+            serialized_graph = fid.read()
+            old_graph_def.ParseFromString(serialized_graph)
+            tf.import_graph_def(old_graph_def, name='')
+        sess = tf.Session(graph=graph, config=tf_config)
+        # Get handles to input and output tensors
+        ops = tf.get_default_graph().get_operations()
+        all_tensor_names = {output.name for op in ops for output in op.outputs}
+        output_tensor_dict = dict((k, None) for k in ['seg_scores', 'link_scores', 'seg_offsets'])
+        for output_tensor_name in output_tensor_dict.keys():
+            if output_tensor_name + ':0' in all_tensor_names:
+                output_tensor = tf.get_default_graph().get_tensor_by_name(output_tensor_name + ':0')
+                output_tensor_dict[output_tensor_name] = output_tensor
+        image_tensor = tf.get_default_graph().get_tensor_by_name("input_image:0")
+    return sess, image_tensor, output_tensor_dict
+
+
+def detect_seglink(input_data_gen, inference_pb_graph, seg_conf_threshold=None, link_conf_threshold=None):
+    print("Start to detect by seglink.")
+    sess, image_tensor, output_tensor_dict =\
+            load_model(inference_pb_graph)
+    print("Successfully loaded model.")
+
+    from tf_extended.seglink import tf_seglink_to_bbox
+
+    def _detect_single_image(image):
+        '''
+        output_dict = sess.run(output_tensor_dict, feed_dict={image_tensor: image, image_shape_tensor: image.shape})
+        bboxes = tf_seglink_to_bbox(output_dict["seg_scores"],
+                                    output_dict["link_scores"],
+                                    output_dict["seg_offsets"],
+                                    image.shape)
+        '''
+        bboxes = tf_seglink_to_bbox(output_tensor_dict["seg_scores"],
+                                    output_tensor_dict["link_scores"],
+                                    output_tensor_dict["seg_offsets"],
+                                    image_tensor)
+        bboxes = sess.run(bboxes, feed_dict = {image_tensor: image})
+        return bboxes
+
+    for image in input_data_gen:
+        boxes = _detect_single_image(image)
+        yield boxes
+
+    sess.close()
+    tf.reset_default_graph()

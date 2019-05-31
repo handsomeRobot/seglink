@@ -5,6 +5,7 @@ from tensorflow.contrib.slim.python.slim.data import parallel_reader
 import tensorflow as tf
 slim = tf.contrib.slim
 import util
+from flags import FLAGS
 
 global feat_shapes
 
@@ -30,7 +31,7 @@ max_height_ratio = 2
 allow_soft_placement = True
 
 # the weight applied to loss of cx, cy, w, h, theta
-prior_scaling = [0.1, 0.1, 0.1, 0.1, 20]
+prior_scaling = [0.1, 0.2, 0.1, 0.2, 20]
 
 max_neg_pos_ratio = 6
 data_format = 'NHWC'
@@ -73,11 +74,9 @@ num_readers = 1
 num_preprocessing_threads = 1 
 
 # update the basic config values
-from flags import FLAGS
-if FLAGS.config_file:
+if FLAGS.config_file is not None:
     exec(open(FLAGS.config_file).read())
 
-    
 # ==============================================================================#
 # Helper functions
 # ==============================================================================#
@@ -95,7 +94,6 @@ def init_config():
     '''
     Calculate advanced config values based on basic config values
     '''
-
     global feat_shapes
     global default_anchors
     global num_anchors
@@ -131,16 +129,19 @@ def init_config():
 
     if batch_size_per_gpu < 1:
         raise ValueError('Invalid batch_size [=%d], resulting in 0 images per gpu.'%(batch_size))
+
+    print_config(print_to_file=False)
     
     return default_anchors
 
     
-def print_config(flags, dataset, save_dir = None, print_to_file = True):
+def print_config(flags=None, dataset=None, save_dir = None, print_to_file = True):
     def do_print(stream=None):
         print('\n# =========================================================================== #', file=stream)
         print('# Training flags:', file=stream)
         print('# =========================================================================== #', file=stream)
-        pprint(flags.__flags, stream=stream)
+        if flags is not None:
+            pprint(flags.__flags, stream=stream)
 
         print('\n# =========================================================================== #', file=stream)
         print('# seglink net parameters:', file=stream)
@@ -154,9 +155,10 @@ def print_config(flags, dataset, save_dir = None, print_to_file = True):
         print('\n# =========================================================================== #', file=stream)
         print('# Training | Evaluation dataset files:', file=stream)
         print('# =========================================================================== #', file=stream)
-        data_files = parallel_reader.get_data_files(dataset.data_sources)
-        pprint(sorted(data_files), stream=stream)
-        print('', file=stream)
+        if dataset is not None:
+            data_files = parallel_reader.get_data_files(dataset.data_sources)
+            pprint(sorted(data_files), stream=stream)
+            print('', file=stream)
     do_print(None)
     
     if print_to_file:

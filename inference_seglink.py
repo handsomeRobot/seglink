@@ -55,9 +55,10 @@ def load_model(weight_pb_file):
     return sess, image_tensor, output_tensor_dict
 
 
-def detect(input_data_gen, inference_pb_graph):
+def detect_seglink(input_data_gen, inference_pb_graph, seg_conf_threshold=None, link_conf_threshold=None):
     print("Start to detect by seglink.")
-    sess, image_tensor, output_tensor_dict = load_model(inference_pb_graph)
+    sess, image_tensor, output_tensor_dict =\
+            load_model(inference_pb_graph)
     print("Successfully loaded model.")
 
     from tf_extended.seglink import tf_seglink_to_bbox
@@ -73,7 +74,9 @@ def detect(input_data_gen, inference_pb_graph):
         bboxes = tf_seglink_to_bbox(output_tensor_dict["seg_scores"],
                                     output_tensor_dict["link_scores"],
                                     output_tensor_dict["seg_offsets"],
-                                    image_tensor)
+                                    image_tensor,
+                                    seg_conf_threshold,
+                                    link_conf_threshold)
         bboxes = sess.run(bboxes, feed_dict = {image_tensor: image})
         return bboxes
 

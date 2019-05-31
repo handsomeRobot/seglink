@@ -501,7 +501,6 @@ def decode_seg_offsets_pred(seg_offsets_pred):
     anchors = config.default_anchors
     anchor_cx, anchor_cy, anchor_w, anchor_h = (anchors[:, idx] for idx in range(4))
     
-    print("config.prior_scaling {}".format(config.prior_scaling))
     offset_cx = seg_offsets_pred[:, 0] * config.prior_scaling[0]
     offset_cy = seg_offsets_pred[:, 1] * config.prior_scaling[1]
     offset_w = seg_offsets_pred[:, 2]  * config.prior_scaling[2] 
@@ -688,7 +687,8 @@ def group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold)
 ############################################################################################################
 #                       combining segments to bboxes                                                       #
 ############################################################################################################
-def tf_seglink_to_bbox(seg_cls_pred, link_cls_pred, seg_offsets_pred, image):
+def tf_seglink_to_bbox(seg_cls_pred, link_cls_pred, seg_offsets_pred, image, 
+                       seg_conf_threshold=None, link_conf_threshold=None):
     if len(seg_cls_pred.shape) == 3:
         assert seg_cls_pred.shape[0] == 1 # only batch_size == 1 supported now TODO
         seg_cls_pred = seg_cls_pred[0, ...]
@@ -698,18 +698,22 @@ def tf_seglink_to_bbox(seg_cls_pred, link_cls_pred, seg_offsets_pred, image):
     assert seg_cls_pred.shape[-1] == 2
     assert link_cls_pred.shape[-1] == 2
     assert seg_offsets_pred.shape[-1] == 5
+
+    if seg_conf_threshold is None:
+        seg_conf_threshold = config.seg_conf_threshold
+    if link_conf_threshold is None:
+        link_conf_threshold = config.link_conf_threshold
     
     seg_scores = seg_cls_pred[:, 1]
     link_scores = link_cls_pred[:, 1]
-    #image_bboxes = seglink_to_bbox(seg_scores, link_scores, 
-    #                               seg_offsets_pred, image_shape=image_shape)
     image_bboxes = tf.py_func(seglink_to_bbox, 
-          [seg_scores, link_scores, seg_offsets_pred, image], 
+          [seg_scores, link_scores, seg_offsets_pred, image, seg_conf_threshold, link_conf_threshold], 
           tf.float32);
     return image_bboxes
     
     
-def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred, image):
+def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred, image, 
+                    seg_conf_threshold, link_conf_threshold):
     """
     Args:
         seg_scores: the scores of segments being positive
@@ -718,18 +722,15 @@ def seglink_to_bbox(seg_scores, link_scores, seg_offsets_pred, image):
     Return:
         bboxes, with shape = (N, 5), and N is the number of predicted bboxes
     """
-    seg_groups = group_segs(seg_scores, link_scores, config.seg_conf_threshold, config.link_conf_threshold);
+    seg_groups = group_segs(seg_scores, link_scores, seg_conf_threshold, link_conf_threshold);
     seg_locs = decode_seg_offsets_pred(seg_offsets_pred)
     
     bboxes = []
     ref_h, ref_w = config.image_shape
-    print("config.image_shape {}".format(config.image_shape))
     image_h, image_w = image.shape[:2]
-    print("image_h, image_w {}".format(image.shape[:2]))
     for group in seg_groups:
         group = [seg_locs[idx, :] for idx in group]
         bbox = combine_segs(group)
-        #print(">>>>> bbox is {}".format(bbox))
         bbox = list(bbox)
         scale = [image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, image_w * 1.0 / ref_w, image_h * 1.0 / ref_h, 1]
         bbox[4] = (scale[1] / scale[0]) * np.tan(bbox[4] * np.pi / 180)

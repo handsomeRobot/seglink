@@ -25,8 +25,8 @@ gpu_memory_fraction = -1
 train_with_ignored = False
 seg_loc_loss_weight = 1.0
 link_cls_loss_weight = 1.0
-seg_conf_threshold = 0.5
-link_conf_threshold = 0.5
+seg_conf_threshold = 0.9
+link_conf_threshold = 0.3
 
 # max number of train steps
 max_number_of_steps = 1000000 
